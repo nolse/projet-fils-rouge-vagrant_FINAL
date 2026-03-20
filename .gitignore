@@ -6,3 +6,4 @@ inventaire/hosts.yml
 .secrets/
 *.pem
 *.key
+inventaire/terraform_ips.json

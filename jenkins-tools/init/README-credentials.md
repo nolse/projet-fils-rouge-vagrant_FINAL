@@ -27,3 +27,20 @@ Jenkins > Manage Jenkins > Credentials > System > Global > Add Credentials
 ## Vérification
 Une fois les credentials créés, lancer le pipeline manuellement
 depuis Jenkins > ic-webapp > Build Now
+
+## Accès initial Jenkins
+
+### 1. Récupérer le mot de passe admin initial
+```bash
+ssh -i .secrets/projet-fil-rouge-key.pem ubuntu@<jenkins_ip> "docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword"
+```
+
+### 2. Se connecter
+- URL : http://<jenkins_ip>:8080
+- Login : admin
+- Password : résultat de la commande ci-dessus
+
+### 3. Suivre le wizard Jenkins
+- Installer les plugins suggérés
+- Créer le premier utilisateur admin
+- Configurer l'URL Jenkins

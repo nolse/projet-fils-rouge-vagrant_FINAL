@@ -81,3 +81,11 @@
     project_src: "{{ webapp_deploy_dir }}"
     state: present
     pull: always
+
+# --- 4. Ajout de l'utilisateur ubuntu au groupe docker ---
+# Permet à l'utilisateur ubuntu de lancer des commandes docker sans sudo
+- name: Ajouter l'utilisateur ubuntu au groupe docker
+  ansible.builtin.user:
+    name: ubuntu
+    groups: docker
+    append: true

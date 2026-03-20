@@ -1,10 +1,10 @@
 ---
 # Valeurs par défaut — surchargeables depuis le playbook ou l'inventaire
-# Image Jenkins custom basée sur CentOS 7 (Jenkins + Nginx intégrés)
-jenkins_image: sadofrazer/jenkins
+# Image officielle Jenkins LTS — sadofrazer/jenkins non utilisable car
+# basée sur CentOS 7 (EOL juin 2024, dépôts yum inaccessibles)
+# et incompatible cgroups v2 (Ubuntu 22.04)
+jenkins_image: jenkins/jenkins:lts
 # Port d'accès à l'interface web Jenkins
 jenkins_port: 8080
-# Port SSH vers le conteneur Jenkins
-jenkins_ssh_port: 22000
 # Port de communication avec les agents Jenkins
 jenkins_agent_port: 50000
