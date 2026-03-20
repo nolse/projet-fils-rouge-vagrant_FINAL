@@ -1,3 +1,8 @@
 
 # Inventaire généré automatiquement (contient des IPs dynamiques)
 inventaire/hosts.yml
+
+# Clés SSH et secrets — ne jamais commiter
+.secrets/
+*.pem
+*.key
