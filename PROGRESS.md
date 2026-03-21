@@ -27,9 +27,9 @@
       - [x] ic-webapp → http://<webapp_ip> ✅
       - [x] pgAdmin  → http://<webapp_ip>:5050 ✅
       - [x] Odoo     → http://<odoo_ip>:8069 ✅
-      - [ ] Configurer credentials Jenkins (docker-hub + ansible-ssh-key)
-      - [ ] Créer job Jenkins (pointer vers repo GitHub)
-      - [ ] Tester pipeline end-to-end
+      - [X] Configurer credentials Jenkins (docker-hub + ansible-ssh-key)
+      - [X] Créer job Jenkins (pointer vers repo GitHub)
+      - [X] Tester pipeline end-to-end
 - [ ] Partie 3 : Kubernetes (Minikube)
       - [ ] Namespace icgroup
       - [ ] Manifests ic-webapp (Deployment + Service)
