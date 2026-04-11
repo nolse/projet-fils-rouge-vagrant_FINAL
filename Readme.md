@@ -2,6 +2,7 @@
 
 Deploiement complet d'une infrastructure DevOps en 3 parties :
 conteneurisation, CI/CD et orchestration Kubernetes.
+Tout est reproductible depuis une VM Vagrant Ubuntu 22.04.
 
 ## Stack technique
 
@@ -23,79 +24,125 @@ conteneurisation, CI/CD et orchestration Kubernetes.
 
 ---
 
+## Prerequis
+
+### Depuis Windows — demarrer la VM Vagrant
+```bash
+cd /d/cursus_devops/vagrant/minikube/minikube_ubuntu22
+vagrant up && vagrant ssh
+```
+
+### Dans la VM Vagrant — cloner le repo
+```bash
+git clone https://github.com/nolse/projet-fils-rouge-vagrant.git
+cd projet-fils-rouge-vagrant
+
+# Placer la cle SSH AWS dans ~/.ssh/
+cp projet-fil-rouge-key.pem ~/.ssh/
+chmod 600 ~/.ssh/projet-fil-rouge-key.pem
+```
+
+### Outils requis dans la VM
+```bash
+# Terraform
+sudo apt install -y terraform
+
+# AWS CLI + credentials
+sudo apt install -y awscli
+aws configure
+
+# jq (parsing JSON)
+sudo apt install -y jq
+
+# Ansible
+sudo apt install -y ansible
+ansible-galaxy collection install community.docker
+```
+
+---
+
 ## Partie 1 — Conteneurisation Docker
 
-Construction et publication de l'image ic-webapp.
+Image deja construite et publiee sur Docker Hub.
 
 ```bash
+# Verifier l'image sur Docker Hub
+docker pull alphabalde/ic-webapp:1.0
+
+# Rebuilder si besoin
 docker build -t alphabalde/ic-webapp:1.0 .
 docker push alphabalde/ic-webapp:1.0
 ```
+
+**Image disponible :** https://hub.docker.com/r/alphabalde/ic-webapp
 
 ---
 
 ## Partie 2 — CI/CD Jenkins + Ansible
 
 Provisioning AWS via Terraform, deploiement via Ansible.
+Tout se fait depuis la VM Vagrant avec deux scripts.
 
+### Etape 1 — Provisioning infrastructure AWS
 ```bash
-# 1. Provisioning infrastructure (depuis Git Bash)
-cd ~/cursus-devops/projet_fil_rouge_infra/app && terraform apply
-
-# 2. Export des IPs
-terraform output -json public_ips > ~/cursus-devops/projet-fils-rouge/inventaire/terraform_ips.json
-
-# 3. Deploiement Ansible (depuis WSL)
-wsl
-rm -rf ~/projet-fils-rouge
-cp -r /mnt/c/Users/balde/cursus-devops/projet-fils-rouge ~/projet-fils-rouge
-cp /mnt/c/Users/balde/cursus-devops/projet_fil_rouge_infra/.secrets/projet-fil-rouge-key.pem ~/projet-fil-rouge-key.pem
-chmod 600 ~/projet-fil-rouge-key.pem
-cd ~/projet-fils-rouge
-bash inventaire/generate_inventory.sh
-ansible-playbook -i inventaire/hosts.yml playbook.yml -v
-
-# 4. Fin de session (depuis Git Bash)
-cd ~/cursus-devops/projet_fil_rouge_infra/app && terraform destroy
+bash reproduce_infra.sh
 ```
+Ce script :
+- Initialise Terraform (backend S3)
+- Cree les 3 instances EC2 + Security Group + EIPs
+- Exporte les IPs dans `inventaire/terraform_ips.json`
 
-**Acces :**
-- Jenkins  : `http://<jenkins_ip>:8080`
-- ic-webapp : `http://<webapp_ip>`
-- pgAdmin  : `http://<webapp_ip>:5050`
-- Odoo     : `http://<odoo_ip>:8069`
+### Etape 2 — Deploiement Ansible
+```bash
+bash reproduce_deploy.sh
+```
+Ce script :
+- Verifie la cle SSH
+- Installe les dependances Ansible
+- Genere l'inventaire depuis terraform_ips.json
+- Attend que les instances AWS soient disponibles en SSH
+- Deploie Odoo, ic-webapp, pgAdmin et Jenkins via Ansible
+
+### Acces aux services
+
+| Application | URL |
+|---|---|
+| Jenkins | http://<jenkins_ip>:8080 |
+| ic-webapp | http://<webapp_ip> |
+| pgAdmin | http://<webapp_ip>:5050 |
+| Odoo | http://<odoo_ip>:8069 |
+
+### Fin de session
+```bash
+cd terraform/app && terraform destroy
+```
 
 ---
 
 ## Partie 3 — Kubernetes (Minikube)
 
 Deploiement de toutes les applications dans un cluster Kubernetes local
-sur une VM Vagrant Ubuntu 22.04 (IP fixe : 192.168.56.100).
+sur la VM Vagrant (IP fixe : 192.168.56.100).
 
-Les NodePorts sont accessibles directement depuis Windows via des regles
-iptables configurees par `setup-network.sh`. Aucun port-forward necessaire.
+Les NodePorts sont accessibles depuis Windows via des regles iptables
+configurees par `setup-network.sh`. Aucun port-forward necessaire.
 
 ### Workflow par session
-
 ```bash
-# 1. Demarrer la VM (depuis Git Bash Windows)
-cd /d/cursus_devops/vagrant/minikube/minikube_ubuntu22
-vagrant up
-vagrant ssh
-
-# 2. Demarrer Minikube (dans la VM)
+# 1. Demarrer Minikube
 minikube start --driver=docker
 
-# 3. Configurer le reseau iptables
+# 2. Configurer le reseau iptables
 bash setup-network.sh
 
-# 4. Deployer toutes les ressources
+# 3. Deployer toutes les ressources
 bash kubernetes/commandes_utils.sh deploy
+
+# 4. Verifier
+kubectl get all -n icgroup
 
 # 5. Fin de session
 minikube stop
-exit
-vagrant halt
 ```
 
 ### Acces depuis Windows (ports fixes)
@@ -117,36 +164,6 @@ vagrant halt
 ---
 
 ## Structure du projet
-
-```
-projet-fils-rouge/
-├── Dockerfile                  # Image ic-webapp
-├── releases.txt                # Version + URLs Odoo/pgAdmin
-├── Jenkinsfile                 # Pipeline CI/CD
-├── setup-network.sh            # Regles iptables pour acces Windows
-├── playbook.yml                # Playbook Ansible principal
-├── ansible.cfg
-├── requirements.yml
-├── roles/
-│   ├── odoo_role/
-│   ├── pgadmin_role/
-│   ├── webapp_role/
-│   └── jenkins_role/
-├── inventaire/
-│   ├── generate_inventory.sh
-│   └── hosts.yml.example
-└── kubernetes/
-    ├── namespace.yml
-    ├── secrets.yml
-    ├── commandes_utils.sh
-    ├── architecture.svg
-    ├── README.md
-    ├── postgres/
-    ├── odoo/
-    ├── pgadmin/
-    └── webapp/
-```
-
 ## Auteur
 
 Balde — Formation DevOps EazyTraining
