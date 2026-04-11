@@ -41,7 +41,7 @@ echo ""
 echo "[1/4] Verification de la cle SSH..."
 if [ ! -f "$SSH_KEY" ]; then
     echo "❌ Cle SSH introuvable : $SSH_KEY"
-    echo "   Copier la cle avec : cp projet-fil-rouge-key.pem ~/.ssh/"
+    echo "   Copier la cle avec : cp projet-fil-rouge-key.pem ~/.ssh/ && chmod 600 ~/.ssh/projet-fil-rouge-key.pem"
     exit 1
 fi
 chmod 600 "$SSH_KEY"
@@ -53,7 +53,7 @@ echo "✅ Cle SSH prete : $SSH_KEY"
 echo ""
 echo "[2/4] Installation des dependances Ansible..."
 cd "$REPO_DIR"
-ansible-galaxy collection install community.docker --upgrade
+ansible-galaxy collection install community.docker
 echo "✅ Dependances installees"
 
 # --------------------------------------------------------

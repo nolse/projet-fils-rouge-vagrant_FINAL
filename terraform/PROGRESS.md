@@ -18,6 +18,6 @@
 - [x] Modules Terraform (security_group, ec2, ebs, eip)
 - [x] terraform apply — 3 VMs opérationnelles
 - [x] SSH OK sur les 3 serveurs
-- [ ] Partie 1 : Conteneurisation app vitrine (Docker)
-- [ ] Partie 2 : Pipeline CI/CD Jenkins + Ansible
-- [ ] Partie 3 : Kubernetes
+- [x] Partie 1 : Conteneurisation app vitrine (Docker)
+- [x] Partie 2 : Pipeline CI/CD Jenkins + Ansible
+- [x] Partie 3 : Kubernetes
