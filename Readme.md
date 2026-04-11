@@ -161,6 +161,7 @@ projet-fils-rouge-vagrant/
 ├── Dockerfile                  # Image ic-webapp
 ├── releases.txt                # Version + URLs Odoo/pgAdmin
 ├── Jenkinsfile                 # Pipeline CI/CD
+├── bootstrap.sh               # Installation des prerequis
 ├── reproduce_infra.sh          # Script reproduction Partie 2 - AWS
 ├── reproduce_deploy.sh         # Script reproduction Partie 2 - Ansible
 ├── setup-network.sh            # Regles iptables acces Windows
