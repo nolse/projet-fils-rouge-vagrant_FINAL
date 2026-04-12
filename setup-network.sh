@@ -3,31 +3,46 @@
 # SETUP NETWORK - Projet Fil Rouge Kubernetes
 # =============================================================
 # Configure les regles iptables pour rendre les NodePorts
-# Kubernetes accessibles depuis Windows via l'IP de la VM Vagrant.
+# Kubernetes accessibles depuis l'hote via l'IP de la VM Vagrant.
 #
 # Architecture reseau :
-#   Windows -> 192.168.56.100 (enp0s8) -> DNAT -> 192.168.49.2 (Minikube)
+#   Hote -> 192.168.56.100 (enp0s8) -> DNAT -> 192.168.49.2 (Minikube)
+#
+# NOTE : L'interface bridge Minikube (br-XXXX) change a chaque
+# redemarrage de Docker. Ce script la detecte automatiquement.
 #
 # Usage : bash setup-network.sh
 # Idempotent : verifie si les regles existent avant de les ajouter.
 # =============================================================
-
 set -e
-
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+RED='\033[0;31m'
 NC='\033[0m'
 
-# --- Configuration ---
+# --- Configuration fixe ---
 VM_IP="192.168.56.100"
 MINIKUBE_IP="192.168.49.2"
-MINIKUBE_IFACE="br-b5510e82bb93"
 HOST_IFACE="enp0s8"
 
 # NodePorts exposes
 WEBAPP_PORT=30080
 ODOO_PORT=30069
 PGADMIN_PORT=30050
+
+# --- Detection automatique de l'interface bridge Minikube ---
+# L'interface bridge change de nom a chaque redemarrage de Docker.
+# On la detecte via l'IP du gateway Minikube (192.168.49.1).
+echo -e "${YELLOW}>>> Detection de l'interface bridge Minikube...${NC}"
+MINIKUBE_IFACE=$(ip route | grep 192.168.49 | awk '{print $3}')
+
+if [ -z "$MINIKUBE_IFACE" ]; then
+    echo -e "${RED}ERREUR : Interface bridge Minikube introuvable.${NC}"
+    echo -e "${RED}Verifiez que Minikube est demarre : minikube start --driver=docker${NC}"
+    exit 1
+fi
+
+echo -e "${GREEN}>>> Interface bridge detectee : $MINIKUBE_IFACE${NC}"
 
 echo -e "${YELLOW}>>> Configuration du reseau iptables...${NC}"
 
@@ -62,14 +77,13 @@ fi
 if ! sudo iptables -C FORWARD -i $HOST_IFACE -o $MINIKUBE_IFACE -j ACCEPT 2>/dev/null; then
   sudo iptables -A FORWARD -i $HOST_IFACE -o $MINIKUBE_IFACE -j ACCEPT
 fi
-
 if ! sudo iptables -C FORWARD -i $MINIKUBE_IFACE -o $HOST_IFACE -j ACCEPT 2>/dev/null; then
   sudo iptables -A FORWARD -i $MINIKUBE_IFACE -o $HOST_IFACE -j ACCEPT
 fi
 
 echo -e "${GREEN}>>> Configuration reseau terminee !${NC}"
 echo -e "${GREEN}======================================${NC}"
-echo -e "${GREEN}URLs accessibles depuis Windows :${NC}"
+echo -e "${GREEN}URLs accessibles depuis l'hote :${NC}"
 echo -e "${GREEN}======================================${NC}"
 echo -e "ic-webapp -> http://$VM_IP:$WEBAPP_PORT"
 echo -e "Odoo      -> http://$VM_IP:$ODOO_PORT"
