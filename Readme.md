@@ -44,6 +44,9 @@ chmod 600 ~/.ssh/projet-fil-rouge-key.pem
 
 ### Outils requis dans la VM
 ```bash
+# Demarrer minikube
+minikube start --driver=docker
+
 # Installer tous les prerequis en une commande
 bash bootstrap.sh
 
