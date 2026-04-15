@@ -1,42 +1,41 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: icgroup-ingress
-  namespace: icgroup
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
+  name: icgroup-ingress              # Nom de l'ingress
+  namespace: icgroup                 # Namespace où il sera déployé
 spec:
-  ingressClassName: nginx
+  ingressClassName: nginx            # Utilisation du contrôleur NGINX Ingress
   rules:
-    - host: ic-webapp.icgroup.fr
+    - host: ic-webapp.icgroup.fr     # Domaine pour l'application web principale
       http:
         paths:
-          - path: /
-            pathType: Prefix
+          - path: /                  # Route racine
+            pathType: Prefix         # Correspond à tous les chemins commençant par /
             backend:
               service:
-                name: ic-webapp-service
+                name: ic-webapp-service  # Service Kubernetes ciblé
                 port:
-                  number: 8080
+                  number: 8080           # Port exposé par le service
 
-    - host: odoo.icgroup.fr
+    - host: odoo.icgroup.fr          # Domaine pour Odoo
       http:
         paths:
-          - path: /
+          - path: /                  # Route racine
             pathType: Prefix
             backend:
               service:
-                name: odoo-service
+                name: odoo-service   # Service Odoo
                 port:
-                  number: 8069
+                  number: 8069       # Port standard d'Odoo
 
-    - host: pgadmin.icgroup.fr
+    - host: pgadmin.icgroup.fr       # Domaine pour PgAdmin
       http:
         paths:
-          - path: /
+          - path: /                  # Route racine
             pathType: Prefix
             backend:
               service:
-                name: pgadmin-service
+                name: pgadmin-service  # Service PgAdmin
                 port:
-                  number: 80
+                  number: 80            # Port HTTP classique
+

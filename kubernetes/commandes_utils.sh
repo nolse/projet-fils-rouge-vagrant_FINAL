@@ -68,6 +68,13 @@ deploy_all() {
   echo -e "${YELLOW}>>> Deploiement de ic-webapp...${NC}"
   kubectl apply -f kubernetes/webapp/
 
+  echo -e "${YELLOW}>>> Deploiement de l'Ingress...${NC}"
+  kubectl apply -f kubernetes/ingress.yml
+  echo ">>> Attente propagation Ingress (180s)..."
+  echo ">>> Les URLs par nom de domaine seront disponibles a la fin de ce delai."
+  echo ">>> Merci de patienter..."
+  sleep 180
+
   echo -e "${GREEN}>>> Deploiement termine !${NC}"
   status
   urls
@@ -84,19 +91,33 @@ status() {
 
   echo -e "${YELLOW}>>> PVC :${NC}"
   kubectl get pvc -n icgroup
+
+  echo -e "${YELLOW}>>> Ingress :${NC}"
+  kubectl get ingress -n icgroup
 }
 
 # --- Affichage des URLs d'acces ---
 # Sur Vagrant, les NodePorts sont directement accessibles
 # depuis Windows via l'IP fixe de la VM (192.168.56.100).
-# Aucun port-forward necessaire.
+# L'Ingress permet egalement l'acces par nom de domaine
+# (necessite la configuration du fichier hosts Windows).
 urls() {
   echo -e "${GREEN}======================================${NC}"
   echo -e "${GREEN}URLs accessibles depuis Windows :${NC}"
   echo -e "${GREEN}======================================${NC}"
+  echo -e "${YELLOW}--- Acces par NodePort :${NC}"
   echo -e "ic-webapp -> http://$VM_IP:30080"
   echo -e "Odoo      -> http://$VM_IP:30069"
   echo -e "pgAdmin   -> http://$VM_IP:30050"
+  echo -e ""
+  echo -e "${YELLOW}--- Acces par nom de domaine (Ingress) :${NC}"
+  echo -e "ic-webapp -> http://ic-webapp.icgroup.fr"
+  echo -e "Odoo      -> http://odoo.icgroup.fr"
+  echo -e "pgAdmin   -> http://pgadmin.icgroup.fr"
+  echo -e ""
+  echo -e "${YELLOW}Note : Les noms de domaine necessitent la ligne suivante${NC}"
+  echo -e "${YELLOW}dans C:\\Windows\\System32\\drivers\\etc\\hosts (Windows) :${NC}"
+  echo -e "192.168.56.100  ic-webapp.icgroup.fr odoo.icgroup.fr pgadmin.icgroup.fr"
   echo -e "${GREEN}======================================${NC}"
 }
 
@@ -108,15 +129,15 @@ creds() {
   echo -e "${GREEN}Identifiants de connexion :${NC}"
   echo -e "${GREEN}======================================${NC}"
   echo -e "${YELLOW}ic-webapp :${NC}"
-  echo -e "  URL      -> http://$VM_IP:30080"
+  echo -e "  URL      -> http://ic-webapp.icgroup.fr"
   echo -e ""
   echo -e "${YELLOW}pgAdmin :${NC}"
-  echo -e "  URL      -> http://$VM_IP:30050"
+  echo -e "  URL      -> http://pgadmin.icgroup.fr"
   echo -e "  Email    -> admin@icgroup.fr"
   echo -e "  Password -> pgadmin_password"
   echo -e ""
   echo -e "${YELLOW}Odoo :${NC}"
-  echo -e "  URL      -> http://$VM_IP:30069"
+  echo -e "  URL      -> http://odoo.icgroup.fr"
   echo -e "  Login    -> admin"
   echo -e "  Password -> admin"
   echo -e ""

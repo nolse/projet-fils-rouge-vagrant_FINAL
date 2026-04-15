@@ -310,8 +310,8 @@ bash reproduce_infra.sh destroy
 ## Partie 3 — Kubernetes (Minikube)
 
 Deploiement de toutes les applications dans un cluster Kubernetes local
-sur la VM Vagrant. Les NodePorts sont accessibles depuis l'hote via des
-regles iptables configurees par `setup-network.sh`.
+sur la VM Vagrant. Deux modes d'acces sont disponibles : NodePort (acces
+direct par IP:port) et Ingress (acces par nom de domaine via NGINX + MetalLB).
 
 ### Workflow par session
 
@@ -334,7 +334,7 @@ kubectl get pods -n icgroup;kubectl get svc -n icgroup;kubectl get pvc -n icgrou
 minikube stop
 ```
 
-### Acces aux applications
+### Acces via NodePort
 
 | Application | URL |
 |---|---|
@@ -342,12 +342,52 @@ minikube stop
 | Odoo | http://192.168.56.100:30069 |
 | pgAdmin | http://192.168.56.100:30050 |
 
-Connexion PostgreSQL depuis pgAdmin :
+### Acces via Ingress (noms de domaine)
+
+L'Ingress Controller NGINX et MetalLB permettent un acces par nom de domaine
+depuis la machine hote Windows.
+
+**Installation :**
+```bash
+# Activer les addons Minikube
+minikube addons enable ingress
+minikube addons enable metallb
+
+# Configurer le pool d'IPs MetalLB
+kubectl apply -f - <<EOF
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  namespace: metallb-system
+  name: config
+data:
+  config: |
+    address-pools:
+    - name: default
+      protocol: layer2
+      addresses:
+      - 192.168.49.100-192.168.49.110
+EOF
+
+# Deployer l'Ingress
+kubectl apply -f kubernetes/ingress.yml
 ```
-Host     : postgres-service
-Port     : 5432
-Database : odoo
+
+**Ajouter dans `C:\Windows\System32\drivers\etc\hosts` (Windows) :**
 ```
+192.168.49.100  ic-webapp.icgroup.fr
+192.168.49.100  odoo.icgroup.fr
+192.168.49.100  pgadmin.icgroup.fr
+```
+
+| Application | URL Ingress |
+|---|---|
+| ic-webapp | http://ic-webapp.icgroup.fr |
+| Odoo | http://odoo.icgroup.fr |
+| pgAdmin | http://pgadmin.icgroup.fr |
+
+> **Note** : L'annotation `rewrite-target` a ete supprimee de `ingress.yml` —
+> elle provoquait des erreurs de navigation dans Odoo et pgAdmin.
 
 ### Commandes utiles
 
@@ -356,6 +396,13 @@ bash kubernetes/commandes_utils.sh urls    # Afficher les URLs
 bash kubernetes/commandes_utils.sh creds   # Afficher les credentials
 bash kubernetes/commandes_utils.sh status  # Etat pods/services/PVC
 bash kubernetes/commandes_utils.sh clean   # Supprimer toutes les ressources
+```
+
+Connexion PostgreSQL depuis pgAdmin :
+```
+Host     : postgres-service
+Port     : 5432
+Database : odoo
 ```
 
 ---
@@ -424,6 +471,17 @@ sudo iptables -F FORWARD
 bash setup-network.sh
 ```
 
+### Ingress — 404 sur sous-routes Odoo/pgAdmin
+**Cause** : Annotation `nginx.ingress.kubernetes.io/rewrite-target: /` active
+**Fix** : Supprimer l'annotation de `kubernetes/ingress.yml` et re-appliquer :
+```bash
+kubectl apply -f kubernetes/ingress.yml
+```
+
+### MetalLB — EXTERNAL-IP en \<pending\>
+**Cause** : Pool d'IPs MetalLB non configure ou mal applique
+**Fix** : Verifier et re-appliquer le ConfigMap MetalLB avec la bonne plage d'IPs
+
 ### git push rejete (remote ahead)
 ```
 error: failed to push some refs — Updates were rejected
@@ -486,6 +544,7 @@ projet-fils-rouge-vagrant/
 └── kubernetes/
     ├── namespace.yml           # Namespace icgroup (label env=prod)
     ├── secrets.yml             # Secrets Kubernetes (base64)
+    ├── ingress.yml             # Ingress NGINX — routage par nom de domaine
     ├── commandes_utils.sh      # Script deploy/clean/status/urls/creds
     ├── README.md               # Documentation specifique Kubernetes
     ├── postgres/               # Manifests PostgreSQL (Deployment + PVC + Service)
