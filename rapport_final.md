@@ -232,6 +232,12 @@ La troisième partie orchestre l'ensemble des applications dans un cluster Kuber
 | Accès externe | NodePort via règles iptables (setup-network.sh) |
 | Stockage | StorageClass standard (provisioning automatique) |
 
+<p align="center">
+  <img src="./images/ARCHITECTURE_GLOBAL.png" width="600">
+
+  <img src="./images/synoptique_Kubernetes.jpeg" width="600">
+</p>
+
 ## Identification des ressources (A → H)
 
 | Ressource | Type Kubernetes | Nom | Rôle |
@@ -244,12 +250,6 @@ La troisième partie orchestre l'ensemble des applications dans un cluster Kuber
 | F | Deployment (1 pod) | postgres | PostgreSQL — données persistées via PVC |
 | G | Service NodePort | pgadmin-service | Exposition pgAdmin — port 30050 |
 | H | Deployment (1 pod) | pgadmin | Interface admin PostgreSQL |
-
-<p align="center">
-  <img src="./images/ARCHITECTURE_GLOBAL.png" width="600">
-
-  <img src="./images/synoptique_Kubernetes.jpeg" width="600">
-</p>
 
 > Point clé : PostgreSQL est le seul service en ClusterIP — la base de données n'est jamais exposée directement à l'extérieur.
 

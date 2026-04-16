@@ -11,6 +11,7 @@
 //   5. Push              - push de l'image sur Docker Hub
 //   6. Generate Inventory- generation dynamique de hosts.yml
 //   7. Deploy            - deploiement via Ansible sur les 3 serveurs
+//   8. Verify Deploy     - verification que les apps repondent
 // ============================================================
 
 pipeline {
@@ -88,9 +89,10 @@ pipeline {
         }
 
         // ----------------------------------------------------
-        // Etape 4 : Test du container
-        // Lance un container, verifie qu'il repond sur le port 8085
-        // puis le supprime
+        // Etape 4 : Test du container ic-webapp
+        // Lance un container en local sur Jenkins, verifie qu'il
+        // repond sur le port 8085 et que la page contient "IC GROUP"
+        // Le pipeline echoue si le test ne passe pas (exit 1)
         // ----------------------------------------------------
         stage('Test') {
             steps {
@@ -104,7 +106,8 @@ pipeline {
                         ${DOCKER_HUB_USER}/${IMAGE_NAME}:${env.APP_VERSION}
                     sleep 5
                     docker ps | grep test-ic-webapp
-                    curl -sf http://localhost:8085 | grep -i "IC GROUP" && echo " Test OK" || echo " Test FAILED"
+                    curl -sf http://localhost:8085 | grep -i "IC GROUP" || exit 1
+                    echo "Test ic-webapp OK"
                 """
             }
             post {
@@ -194,17 +197,59 @@ EOF
             }
         }
 
+        // ----------------------------------------------------
+        // Etape 8 : Verification post-deploiement
+        // Verifie que chaque application repond correctement
+        // sur son serveur apres le deploiement Ansible
+        // Le pipeline echoue si une app ne repond pas (exit 1)
+        // ----------------------------------------------------
+        stage('Verify Deploy') {
+            steps {
+                echo ' Verification du deploiement sur les serveurs...'
+                sh '''
+                    sleep 15
+                    curl -sf http://$ODOO_IP:8069 || exit 1
+                    echo "Odoo OK"
+                    curl -sf http://$WEBAPP_IP:5050 || exit 1
+                    echo "PgAdmin OK"
+                    curl -sf http://$WEBAPP_IP:8080 || exit 1
+                    echo "ic-webapp OK"
+                '''
+            }
+        }
+
     }  //  ferme stages
 
     // --------------------------------------------------------
-    // Notifications post-pipeline
+    // Notifications Slack selon le resultat du pipeline
+    // Necessite : plugin "Slack Notification" + credentials
+    // configures dans Jenkins (token Slack)
+    // Canal : #jenkins-eazytraining-alpha-alerte
+    // - SUCCESS  : vert   (#00FF00)
+    // - FAILURE  : rouge  (#FF0000)
+    // - UNSTABLE : orange (#FFA500)
     // --------------------------------------------------------
     post {
         success {
-            echo " Pipeline termine avec succes - version ${env.APP_VERSION} deployee !"
+            slackSend(
+                channel: '#jenkins-eazytraining-alpha-alerte',
+                color: '#00FF00',
+                message: "✅ SUCCESS: ${env.JOB_NAME} [${env.BUILD_NUMBER}] - ic-webapp:${env.APP_VERSION} deployee ! ${env.BUILD_URL}"
+            )
         }
         failure {
-            echo " Pipeline en echec - verifiez les logs ci-dessus."
+            slackSend(
+                channel: '#jenkins-eazytraining-alpha-alerte',
+                color: '#FF0000',
+                message: "❌ FAILED: ${env.JOB_NAME} [${env.BUILD_NUMBER}] - ic-webapp:${env.APP_VERSION} ${env.BUILD_URL}"
+            )
+        }
+        unstable {
+            slackSend(
+                channel: '#jenkins-eazytraining-alpha-alerte',
+                color: '#FFA500',
+                message: "⚠️ UNSTABLE: ${env.JOB_NAME} [${env.BUILD_NUMBER}] - ic-webapp:${env.APP_VERSION} ${env.BUILD_URL}"
+            )
         }
         always {
             // Nettoyage des images Docker non utilisees pour liberer l'espace
