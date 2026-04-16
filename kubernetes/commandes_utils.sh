@@ -70,10 +70,10 @@ deploy_all() {
 
   echo -e "${YELLOW}>>> Deploiement de l'Ingress...${NC}"
   kubectl apply -f kubernetes/ingress.yml
-  echo ">>> Attente propagation Ingress (180s)..."
+  echo ">>> Attente propagation Ingress (60s)..."
   echo ">>> Les URLs par nom de domaine seront disponibles a la fin de ce delai."
   echo ">>> Merci de patienter..."
-  sleep 180
+  sleep 60 
 
   echo -e "${GREEN}>>> Deploiement termine !${NC}"
   status

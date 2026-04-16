@@ -511,46 +511,74 @@ projet-fils-rouge-vagrant/
 ├── Dockerfile                  # Image ic-webapp (python:3.6-alpine + Flask)
 ├── app.py                      # Application Flask ic-webapp
 ├── releases.txt                # Version + URLs Odoo/pgAdmin (lu par Jenkinsfile + Dockerfile)
-├── Jenkinsfile                 # Pipeline CI/CD 7 stages (doit etre en ASCII pur)
-├── playbook.yml                # Playbook Ansible principal (orchestre les 4 roles)
+├── Jenkinsfile                 # Pipeline CI/CD 7 stages (doit être en ASCII pur)
+├── playbook.yml                # Playbook Ansible principal (orchestre les 4 rôles)
 ├── ansible.cfg                 # Config Ansible (inventaire, remote_user, callbacks)
 ├── requirements.yml            # Collections Ansible (community.docker >= 3.0.0)
-├── bootstrap.sh                # Installation des prerequis (pip3, terraform, aws, ansible)
+├── bootstrap.sh                # Installation des prérequis (pip3, terraform, aws, ansible)
 ├── reproduce_infra.sh          # Provisioning AWS via Terraform (supporte destroy)
-├── reproduce_deploy.sh         # Deploiement initial via Ansible
-├── setup-network.sh            # Regles iptables Kubernetes (detection bridge auto)
-├── .secrets/                   # Cles SSH (gitignore — ne jamais committer)
+├── reproduce_deploy.sh         # Déploiement initial via Ansible
+├── setup-network.sh            # Règles iptables Kubernetes (détection bridge auto)
+├── Projet Fil Rouge.pdf        # Sujet officiel du projet (document fourni)
+├── rapport_final.md            # Rapport final rédigé pour le projet
+├── Readme.md                   # Documentation principale du dépôt
+│
+├── images/                     # Images d’illustrations (schémas, captures, diagrammes)
+│   └── releases.txt            # Fichier texte conservé (non-image)
+│
+├── .secrets/                   # Clés SSH (gitignore — ne jamais committer)
 │   └── projet-fil-rouge-key.pem
+│
 ├── terraform/
 │   ├── app/
-│   │   ├── main.tf
-│   │   ├── outputs.tf
-│   │   ├── variables.tf
+│   │   ├── main.tf             # Ressources EC2, EBS, SG, outputs
+│   │   ├── outputs.tf          # Valeurs exportées (IP, volumes…)
+│   │   ├── variables.tf        # Variables Terraform
 │   │   └── terraform.tfvars    # region us-east-1, key_name projet-fil-rouge-key
 │   └── modules/
-│       ├── ec2/
-│       ├── eip/
-│       ├── security_group/
-│       └── ebs/
+│       ├── ec2/                # Module EC2 (instance + user_data)
+│       ├── eip/                # Module Elastic IP
+│       ├── security_group/     # Module Security Group (ports Odoo, pgAdmin, webapp)
+│       └── ebs/                # Module EBS (volume PostgreSQL)
+│
 ├── roles/
-│   ├── odoo_role/              # Deploiement Odoo + PostgreSQL via docker-compose
-│   ├── pgadmin_role/           # Deploiement pgAdmin + servers.json preconfigure
-│   ├── webapp_role/            # Deploiement ic-webapp
-│   └── jenkins_role/           # Jenkins + Docker CLI + Ansible integres dans le container
+│   ├── odoo_role/              # Déploiement Odoo + PostgreSQL via docker-compose
+│   ├── pgadmin_role/           # Déploiement pgAdmin + servers.json préconfiguré
+│   ├── webapp_role/            # Déploiement ic-webapp
+│   └── jenkins_role/           # Jenkins + Docker CLI + Ansible intégrés dans le container
+│
 ├── inventaire/
-│   ├── generate_inventory.sh   # Generation hosts.yml depuis terraform_ips.json
-│   ├── terraform_ips.json      # IPs exportees par Terraform (gitignore)
-│   └── hosts.yml.example       # Exemple d'inventaire Ansible
+│   ├── generate_inventory.sh   # Génération hosts.yml depuis terraform_ips.json
+│   ├── terraform_ips.json      # IPs exportées par Terraform (gitignore)
+│   └── hosts.yml.example       # Exemple d’inventaire Ansible
+│
 └── kubernetes/
     ├── namespace.yml           # Namespace icgroup (label env=prod)
     ├── secrets.yml             # Secrets Kubernetes (base64)
     ├── ingress.yml             # Ingress NGINX — routage par nom de domaine
     ├── commandes_utils.sh      # Script deploy/clean/status/urls/creds
-    ├── README.md               # Documentation specifique Kubernetes
+    ├── README.md               # Documentation spécifique Kubernetes
+    │
     ├── postgres/               # Manifests PostgreSQL (Deployment + PVC + Service)
+    │   ├── pvc.yml             # Volume persistant PostgreSQL
+    │   ├── deployment.yml      # Déploiement PostgreSQL
+    │   └── service.yml         # Service PostgreSQL (ClusterIP)
+    │
     ├── odoo/                   # Manifests Odoo (Deployment + PVC + Service)
+    │   ├── pvc.yml
+    │   ├── configmap.yml       # Variables d’environnement Odoo
+    │   ├── service.yml
+    │   └── deployment.yml
+    │
     ├── pgadmin/                # Manifests pgAdmin (Deployment + ConfigMap + Service)
+    │   ├── configmap.yml
+    │   ├── service.yml
+    │   └── deployment.yml
+    │
     └── webapp/                 # Manifests ic-webapp (Deployment + Service)
+        ├── service.yml
+        └── deployment.yml
+
 ```
 
 ---

@@ -1,6 +1,6 @@
 # Rapport Technique — Projet Fil Rouge IC Group DevOps
 
-**Auteur : Balde — Formation DevOps EazyTraining — 2025**
+**Auteur : Balde — Formation DevOps EazyTraining — 2026**
 
 ---
 
@@ -53,8 +53,9 @@ vagrant up && vagrant ssh
 
 ```bash
 cd ~
-git clone https://github.com/nolse/projet-fils-rouge-vagrant.git
-cd projet-fils-rouge-vagrant
+git clone https://github.com/nolse/projet-fils-rouge-vagrant_INGDM.git
+cd projet-fils-rouge-vagrant_INGDM
+ 
 ```
 
 > ⚠️ Travailler impérativement sous `/home/vagrant` et non `/mnt/`. Le dossier `/mnt/` est world-writable — Ansible refusera de lire `ansible.cfg` depuis ce chemin.
@@ -243,6 +244,12 @@ La troisième partie orchestre l'ensemble des applications dans un cluster Kuber
 | F | Deployment (1 pod) | postgres | PostgreSQL — données persistées via PVC |
 | G | Service NodePort | pgadmin-service | Exposition pgAdmin — port 30050 |
 | H | Deployment (1 pod) | pgadmin | Interface admin PostgreSQL |
+
+<p align="center">
+  <img src="./images/ARCHITECTURE_GLOBAL.png" width="600">
+
+  <img src="./images/synoptique_Kubernetes.jpeg" width="600">
+</p>
 
 > Point clé : PostgreSQL est le seul service en ClusterIP — la base de données n'est jamais exposée directement à l'extérieur.
 
@@ -514,13 +521,91 @@ Pour accéder aux applications via leurs noms de domaine depuis Windows, ajouter
 | Odoo | http://odoo.icgroup.fr | odoo-service:8069 |
 | pgAdmin | http://pgadmin.icgroup.fr | pgadmin-service:80 |
 
-## Captures d'écran
+## Illustrations du travail
 
 *[Insérer capture — ic-webapp accessible sur http://ic-webapp.icgroup.fr]*
 
 *[Insérer capture — Odoo accessible sur http://odoo.icgroup.fr]*
 
 *[Insérer capture — pgAdmin accessible sur http://pgadmin.icgroup.fr]*
+
+<p align="center">
+  <img src="./images/pipeline.jpeg" width="600">
+  <img src="./images/releases.jpeg" width="600"><br><br>
+
+  <img src="./images/server_def.jpeg" width="600">
+  <img src="./images/site_vitrine.jpeg" width="600"><br><br>
+
+</p>
+
+
+<p align="center">
+  <img src="./images/DOCKER_HUB.png" width="600">
+  <img src="./images/DOCKER_PUSH_WEBAPP_V1P1_POSTWEBHOOK.png" width="600"><br><br>
+</p>
+
+<p align="center">
+  <img src="./images/REPRODUCE_INFRA_OK.png" width="600">
+  <img src="./images/REPRODUCE_INFRA_INPROGRESS.png" width="600"><br><br>
+
+  <img src="./images/ansible-ssh-key.png" width="600">
+  <img src="./images/export_var.jpeg" width="600"><br><br>
+</p>
+
+<p align="center">
+  <img src="./images/REPRODUCE_DEPLOY_INPROGRESS.png" width="600">
+  <img src="./images/REPRODUCE_DEPLOY_OK.png" width="600"><br><br>
+
+  <img src="./images/VARIABLES_ENV1.png" width="600">
+  <img src="./images/VARIABLES_ENV2.png" width="600"><br><br>
+</p>
+
+<p align="center">
+  <img src="./images/JENKINS_URL_OK.png" width="600">
+  <img src="./images/JOB_IC_WEBAPP.png" width="600"><br><br>
+
+  <img src="./images/CREDENTIALS_MAJ_ANSIBLE_SSHKEY_FILE.png" width="600">
+  <img src="./images/PIPELINE_IC_WEBAPP_OK1.png" width="600"><br><br>
+
+  <img src="./images/PIPELINE_IC_WEBAPP_BLUEOCEAN_OK2.png" width="600">
+  <img src="./images/CONSOLEOUTPUT_PIPELINE_ICWEBAPP.png" width="600"><br><br>
+</p>
+
+<p align="center">
+  <img src="./images/CONF_WEBHOOK_TRIGGERS.png" width="600">
+  <img src="./images/GITHUB_CONF_WEBHOOK_TRIGGERS.png" width="600"><br><br>
+
+  <img src="./images/WEBHOOK_DEPLOY_V1P1_PIPELINE.png" width="600">
+  <img src="./images/WEBHOOK_DEPLOY_V1P1_PIPELINE_SUCCES.png" width="600"><br><br>
+
+  <img src="./images/DOCKER_PUSH_WEBAPP_V1P1_POSTWEBHOOK.png" width="600">
+  <img src="./images/POST_PIPELINERUN_3URLSOK.png" width="600"><br><br>
+</p>
+
+<p align="center">
+  <img src="./images/IC_WEBAPP_URL_OK.png" width="600">
+  <img src="./images/PGADMIN_URL_OK.png" width="600"><br><br>
+
+  <img src="./images/ODOO_URL_OK.png" width="600">
+  <img src="./images/PART3_URLS_OK_UP.png" width="600"><br><br>
+
+  <img src="./images/PART3_LOGIN_URLS_OK.png" width="600">
+</p>
+
+<p align="center">
+  <img src="./images/PART3_PODS_PVC_SVC_UP.png" width="600">
+  <img src="./images/PART3_PODS_REPLICAS_EGAL2.png" width="600"><br><br>
+
+  <img src="./images/PART3_INGRESS_METALLB.png" width="600">
+  <img src="./images/PART3_ODOO_URLOK1.png" width="600"><br><br>
+
+  <img src="./images/PART3_ICWEBAPP_URLOK1.png" width="600">
+  <img src="./images/PART3_PGADMIN_URLOK1.png" width="600"><br><br>
+
+  <img src="./images/PART3_ODOO_URLOK2.png" width="600">
+  <img src="./images/PART3_PGADMIN_URLOK2.png" width="600"><br><br>
+</p>
+
 
 ---
 
