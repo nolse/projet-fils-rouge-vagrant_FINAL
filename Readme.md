@@ -255,6 +255,38 @@ Repo GitHub → Settings → Webhooks → Add webhook
 Payload URL  : http://<jenkins_ip>:8080/github-webhook/
 Content type : application/json
 Trigger      : Just the push event
+
+### Notifications Slack (Jenkins)
+
+Le pipeline envoie automatiquement une notification Slack :
+- Succes → message vert
+- Echec → message rouge
+
+#### Configuration rapide
+
+1. Recuperer le token Slack :
+   - Slack → Apps → Jenkins CI → Configuration → copier le token
+
+2. Ajouter le credential dans Jenkins :
+Manage Jenkins → Credentials → Add Credentials
+
+- Kind : Secret text  
+- Secret : token Slack  
+- ID : `slack-token`
+
+3. Configurer Slack dans Jenkins :
+
+Manage Jenkins → Configure System → Slack
+
+
+- Workspace : votre workspace  
+- Credential : `slack-token`  
+- Channel : `#jenkins-eazytraining-alpha-alerte`
+
+Tester avec **Test Connection** → message "Success"
+
+> Une fois configure, les notifications sont envoyees automatiquement par le pipeline.
+
 ```
 
 ### Etape 4 — Run manuel (version 1.0)
@@ -269,6 +301,25 @@ Le pipeline execute 7 stages :
 5. Push — docker push sur Docker Hub (tag 1.0 + latest)
 6. Generate Inventory — generation dynamique de hosts.yml avec les IPs AWS
 7. Deploy — ansible-playbook sur les 3 serveurs AWS
+
+### Tests automatises du pipeline
+
+Le pipeline Jenkins integre une etape de test du container `ic-webapp` avant le push sur Docker Hub.
+
+Ces tests permettent de verifier rapidement que l'application fonctionne correctement avant de la deployer.
+
+Verifications effectuees :
+
+- Taille de l'image Docker (< 200MB)
+- Demarrage du container
+- Reponse HTTP (code 200)
+- Verification du contenu de la page :
+  - Presence du texte "IC GROUP"
+  - Presence des liens Odoo et pgAdmin
+
+Les tests sont executes directement depuis le container (`docker exec`) car Jenkins tourne lui-meme dans Docker.
+
+> Si un test echoue, le pipeline est automatiquement interrompu.
 
 ### Etape 5 — Run automatique (version 1.1)
 

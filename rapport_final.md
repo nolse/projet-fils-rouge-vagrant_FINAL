@@ -193,6 +193,37 @@ docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 | 6. Generate Inventory | Génération dynamique de hosts.yml avec les IPs AWS |
 | 7. Deploy | Exécution du playbook Ansible sur les 3 serveurs |
 
+### Détail du stage de test (qualité et validation)
+
+Le stage **Test** joue un rôle critique dans le pipeline CI/CD. Il permet de valider automatiquement le bon fonctionnement de l'application avant son déploiement.
+
+Contrairement à un simple build, ce stage vérifie le comportement réel du container.
+
+Les vérifications effectuées sont les suivantes :
+
+- **Validation de la taille de l'image Docker**
+  - L'image doit être inférieure à 200MB
+  - Objectif : garantir une image optimisée et légère
+
+- **Démarrage du container**
+  - Lancement avec les variables d'environnement dynamiques (ODOO_URL, PGADMIN_URL)
+  - Vérification que le container est bien en état "running"
+
+- **Test HTTP**
+  - Requête HTTP exécutée depuis l'intérieur du container (`docker exec`)
+  - Vérification du code de retour (HTTP 200)
+
+- **Validation du contenu applicatif**
+  - Présence du texte "IC GROUP"
+  - Vérification des liens injectés dynamiquement :
+    - Odoo
+    - pgAdmin
+
+Ce choix de test depuis l'intérieur du container est volontaire :
+Jenkins étant lui-même exécuté dans Docker, cela garantit un test fiable dans un contexte Docker-in-Docker.
+
+> En cas d'échec d'un seul test, le pipeline est immédiatement interrompu, empêchant le déploiement d'une version non fonctionnelle.
+
 ## Déclenchement automatique via webhook
 
 ```bash
@@ -201,6 +232,50 @@ git add releases.txt && git commit -m 'release: version 1.1' && git push
 ```
 
 Configuration du webhook (Settings → Webhooks) : Payload URL = `http://<jenkins_ip>:8080/github-webhook/` | Content type = `application/json` | Trigger = push event.
+
+### Notifications Slack (observabilité du pipeline)
+
+Afin d'améliorer la visibilité et le suivi des exécutions, des notifications Slack ont été intégrées au pipeline Jenkins.
+
+#### Fonctionnement
+
+Le pipeline envoie automatiquement un message dans un canal Slack dédié :
+
+- Succès → message vert
+- Échec → message rouge
+
+Chaque notification contient :
+- Le nom du job
+- Le numéro du build
+- Un lien direct vers Jenkins
+
+#### Mise en place
+
+La configuration repose sur le plugin Slack Jenkins et un token d'authentification.
+
+1. **Récupération du token Slack**
+   - Slack → Apps → Jenkins CI → Configuration
+   - Copier le token généré
+
+2. **Ajout dans Jenkins**
+   - Manage Jenkins → Credentials → Add Credentials
+   - Type : Secret text
+   - ID : `slack-token`
+
+3. **Configuration globale**
+   - Manage Jenkins → Configure System → Slack
+   - Association du workspace et du credential
+   - Définition du canal par défaut
+
+Un test de connexion permet de valider la configuration (message "Success" + notification reçue).
+
+#### Intérêt
+
+- Suivi en temps réel des déploiements
+- Réactivité en cas d'échec
+- Intégration dans un workflow collaboratif
+
+> Cette fonctionnalité rapproche le pipeline d'un fonctionnement DevOps réel en entreprise, où la supervision et la communication sont essentielles.
 
 ## URLs d'accès (Partie 2)
 
@@ -215,6 +290,16 @@ Configuration du webhook (Settings → Webhooks) : Payload URL = `http://<jenkin
 # Destruction de l'infrastructure AWS en fin de session
 bash reproduce_infra.sh destroy
 ```
+
+<p align="center">
+  <img src="./images/TEST_CONNEXION_SLACK_OK.png" width="600"><br>
+  <img src="./images/PIPELINE_IC_WEBAPP_OK2.png" width="600"><br>
+  <img src="./images/NOTIFICATION_SUCCES_PIPELINE_WEBAPP.png" width="600"><br>
+  <img src="./images/PIPELINE_IC_WEBAPP_BLUEOCEAN_OK3_WITHNOTIF.png" width="600"><br>
+  <img src="./images/NOTIFICATION_SUCCES_PIPELINE_WEBAPP_FINAL.png" width="600"><br>
+  <img src="./images/bash_reproduce_infra.sh_destroy.png" width="600">
+</p>
+
 
 ---
 
@@ -522,12 +607,6 @@ Pour accéder aux applications via leurs noms de domaine depuis Windows, ajouter
 | pgAdmin | http://pgadmin.icgroup.fr | pgadmin-service:80 |
 
 ## Illustrations du travail
-
-*[Insérer capture — ic-webapp accessible sur http://ic-webapp.icgroup.fr]*
-
-*[Insérer capture — Odoo accessible sur http://odoo.icgroup.fr]*
-
-*[Insérer capture — pgAdmin accessible sur http://pgadmin.icgroup.fr]*
 
 <p align="center">
   <img src="./images/pipeline.jpeg" width="600">
