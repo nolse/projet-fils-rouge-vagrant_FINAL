@@ -90,7 +90,7 @@ pipeline {
         stage('Test') {
             steps {
                 echo ' Test du container ic-webapp...'
-                sh """
+                sh '''
                     # 1. Vérifier la taille de l'image avant de lancer le container
                     IMAGE_SIZE=\$(docker image inspect ${DOCKER_HUB_USER}/${IMAGE_NAME}:${env.APP_VERSION} --format='{{.Size}}')
                     echo "Taille image : \$IMAGE_SIZE bytes"
@@ -127,7 +127,7 @@ pipeline {
                     # 7. Vérifier que le lien PgAdmin est bien injecté
                     curl -sf http://localhost:8085 | grep -i "${env.PGADMIN_URL}" || exit 1
                     echo "Lien PgAdmin présent OK"
-                """
+                '''
             }
             post {
                 always {
