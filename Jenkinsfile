@@ -104,7 +104,7 @@ pipeline {
                         -e ODOO_URL=${env.ODOO_URL} \\
                         -e PGADMIN_URL=${env.PGADMIN_URL} \\
                         ${DOCKER_HUB_USER}/${IMAGE_NAME}:${env.APP_VERSION}
-                    sleep 5
+                    sleep 30 
 
                     # 3. Vérifier que le container tourne
                     docker ps | grep test-ic-webapp || exit 1
