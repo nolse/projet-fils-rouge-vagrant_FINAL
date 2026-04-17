@@ -111,8 +111,9 @@ pipeline {
                     echo "Container démarré OK"
                     docker logs test-ic-webapp
                     # 4. Vérifier le code HTTP 200
-                    HTTP_CODE=\$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8085)
-                    [ "\$HTTP_CODE" = "200" ] || exit 1
+                    HTTP_CODE=$(docker exec test-ic-webapp curl -s -o /dev/null -w "%{http_code}" http://localhost:8080)
+                    echo "HTTP_CODE=$HTTP_CODE"
+                    [ "$HTTP_CODE" = "200" ] || exit 1
                     echo "HTTP 200 OK"
 
                     # 5. Vérifier que la page contient IC GROUP
