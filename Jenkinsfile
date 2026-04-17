@@ -109,7 +109,7 @@ pipeline {
                     # 3. Vérifier que le container tourne
                     docker ps | grep test-ic-webapp || exit 1
                     echo "Container démarré OK"
-
+                    docker logs test-ic-webapp
                     # 4. Vérifier le code HTTP 200
                     HTTP_CODE=\$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8085)
                     [ "\$HTTP_CODE" = "200" ] || exit 1
