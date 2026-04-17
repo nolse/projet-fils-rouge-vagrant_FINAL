@@ -4,6 +4,10 @@ FROM python:3.6-alpine
 # Répertoire de travail dans le conteneur
 WORKDIR /opt
 
+# Installation de curl (utile pour les tests HTTP dans Jenkins)
+# apk = gestionnaire de paquets Alpine
+RUN apk add --no-cache curl
+
 # Copie du code source dans le conteneur
 COPY . .
 
