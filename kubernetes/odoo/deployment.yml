@@ -6,7 +6,6 @@
 # c'est exactement le nom du Service PostgreSQL qu'on a cree.
 # Kubernetes resout ce nom automatiquement dans le namespace.
 # =============================================================
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,7 +15,7 @@ metadata:
     app: odoo
     env: prod
 spec:
-  replicas: 2 
+  replicas: 2
   selector:
     matchLabels:
       app: odoo
@@ -26,10 +25,36 @@ spec:
         app: odoo
         env: prod
     spec:
+      # -----------------------------------------------------------
+      # INIT CONTAINER
+      # -----------------------------------------------------------
+      # Un initContainer est un conteneur spécial qui s'exécute
+      # AVANT le conteneur principal et doit se terminer avec
+      # succès (code retour 0) pour que le pod démarre.
+      #
+      # Ici on utilise busybox pour tenter une connexion TCP
+      # sur postgres-service:5432 en boucle toutes les 2s.
+      # Tant que PostgreSQL ne répond pas, Odoo ne démarre pas.
+      #
+      # C'est la solution propre au problème de dépendance entre
+      # pods : Kubernetes ne garantit pas l'ordre de démarrage,
+      # mais l'initContainer nous permet de l'imposer.
+      # -----------------------------------------------------------
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox        # image minimale avec les outils réseau de base
+          command:
+            - sh
+            - -c
+            - |
+              until nc -z postgres-service 5432; do
+                echo "En attente de PostgreSQL..."
+                sleep 2
+              done
+              echo "PostgreSQL est prêt - démarrage d'Odoo"
       containers:
         - name: odoo
           image: odoo:13.0
-
           # -----------------------------------------------------------
           # STRATEGIE DE CONFIGURATION
           # -----------------------------------------------------------
@@ -52,10 +77,8 @@ spec:
           args:
             - "--config=/etc/odoo/odoo.conf"  # Charge le fichier de config via ConfigMap
             - "--update=web"          # Regenere les assets CSS/JS au demarrage
-        
           ports:
             - containerPort: 8069
-
           volumeMounts:
             # Monte le fichier odoo.conf depuis le ConfigMap
             # au chemin attendu par Odoo dans le conteneur
@@ -65,7 +88,6 @@ spec:
             # Persiste le filestore Odoo (assets CSS/JS + fichiers attaches)
             - name: odoo-storage
               mountPath: /var/lib/odoo
-
           env:
             # Variables en complement du fichier conf
             # Credentials lus depuis le Secret (jamais en clair !)
@@ -83,6 +105,53 @@ spec:
                 secretKeyRef:
                   name: icgroup-secrets
                   key: POSTGRES_PASSWORD
+
+          # -----------------------------------------------------------
+          # SONDE READINESS
+          # -----------------------------------------------------------
+          # Odoo 13 n'expose pas de route /health dédiée.
+          # On utilise une sonde httpGet sur / (la racine) :
+          # Kubernetes considère tout code HTTP 200-399 comme un succès.
+          # Odoo retourne un 200 ou 303 (redirect) quand il est opérationnel,
+          # ce qui suffit pour valider que le serveur web répond.
+          #
+          # initialDelaySeconds à 30s car Odoo doit :
+          #   1. se connecter à PostgreSQL
+          #   2. vérifier/migrer le schéma de la BDD
+          #   3. régénérer les assets CSS/JS (--update=web)
+          # Avant ça, tout check échouerait systématiquement.
+          # -----------------------------------------------------------
+          readinessProbe:
+            httpGet:
+              path: /            # route racine - repond dès qu'Odoo est prêt
+              port: 8069
+            initialDelaySeconds: 30  # Odoo est lent à démarrer - on lui laisse 30s
+            periodSeconds: 10
+            failureThreshold: 3      # 3 echecs → retiré du Service, pas tué
+
+          # -----------------------------------------------------------
+          # SONDE LIVENESS
+          # -----------------------------------------------------------
+          # On utilise ici une sonde "tcpSocket" : Kubernetes tente
+          # simplement d'ouvrir une connexion TCP sur le port 8069.
+          # Si la connexion s'établit → le process Odoo tourne.
+          # Si le port ne répond plus → Kubernetes redémarre le pod.
+          #
+          # Pourquoi tcpSocket ici plutôt que httpGet ?
+          # La liveness ne cherche pas à savoir si Odoo est "prêt à servir"
+          # (c'est le rôle de la readiness) mais juste s'il est "vivant".
+          # Un check TCP est suffisant et moins couteux qu'une requête HTTP.
+          #
+          # initialDelaySeconds à 60s : Odoo peut mettre jusqu'à 1 minute
+          # pour démarrer complètement avec --update=web sur une petite VM.
+          # Tuer le pod avant ça serait une erreur (faux positif).
+          # -----------------------------------------------------------
+          livenessProbe:
+            tcpSocket:
+              port: 8069
+            initialDelaySeconds: 60  # délai long : démarrage Odoo peut être très lent
+            periodSeconds: 30
+            failureThreshold: 3      # 3 echecs → Kubernetes redémarre le pod
 
       volumes:
         # Le ConfigMap odoo-config est monte comme un fichier dans le pod

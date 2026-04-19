@@ -13,7 +13,6 @@
 # Les ports changent a chaque session - mettre a jour avec :
 # bash kubernetes/commandes_utils.sh update-urls PORT_W PORT_O PORT_P
 # =============================================================
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -38,11 +37,52 @@ spec:
           image: alphabalde/ic-webapp:1.0
           ports:
             - containerPort: 8080
+
           env:
             # URL vers Odoo - mise a jour via commandes_utils.sh update-urls
             - name: ODOO_URL
               value: "http://192.168.56.100:30069"
-
             # URL vers pgAdmin - mise a jour via commandes_utils.sh update-urls
             - name: PGADMIN_URL
               value: "http://192.168.56.100:30050"
+
+          # -----------------------------------------------------------
+          # SONDE READINESS
+          # -----------------------------------------------------------
+          # Kubernetes pose la question : "le pod est-il PRET a recevoir
+          # du trafic ?" Tant que cette sonde echoue, le pod est retire
+          # du Service (aucune requete ne lui est envoyee), mais il reste
+          # vivant et en cours de demarrage.
+          #
+          # Cas concret : si Flask met 5s a demarrer, le Service n'envoie
+          # aucun utilisateur vers ce pod pendant ces 5s.
+          # -----------------------------------------------------------
+          readinessProbe:
+            httpGet:
+              path: /          # route racine Flask - repond 200 si l'app est up
+              port: 8080
+            initialDelaySeconds: 5   # attendre 5s apres le lancement du conteneur
+                                     # avant le 1er check (laisse Flask démarrer)
+            periodSeconds: 10        # verifier toutes les 10s
+            failureThreshold: 3      # 3 echecs consecutifs → pod retire du Service
+
+          # -----------------------------------------------------------
+          # SONDE LIVENESS
+          # -----------------------------------------------------------
+          # Kubernetes pose la question : "le pod est-il toujours VIVANT ?"
+          # Si cette sonde echoue, Kubernetes tue et redemarre le conteneur
+          # automatiquement (self-healing).
+          #
+          # Cas concret : si Flask se bloque dans une boucle infinie et ne
+          # repond plus, Kubernetes le detecte et relance le conteneur.
+          # -----------------------------------------------------------
+          livenessProbe:
+            httpGet:
+              path: /          # meme route : un 200 prouve que Flask repond
+              port: 8080
+            initialDelaySeconds: 10  # delai plus long que la readiness : on laisse
+                                     # le temps a l'app d'etre pleinement operationnelle
+                                     # avant de commencer a surveiller sa "sante"
+            periodSeconds: 30        # verifier toutes les 30s (moins frequent :
+                                     # un crash se detecte en quelques dizaines de sec)
+            failureThreshold: 3      # 3 echecs consecutifs → Kubernetes redémarre le pod

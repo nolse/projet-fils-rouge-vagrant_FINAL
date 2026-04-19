@@ -5,7 +5,6 @@
 # Il lit les credentials depuis le Secret icgroup-secrets
 # et monte le PVC pour persister les données.
 # =============================================================
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -51,6 +50,53 @@ spec:
           volumeMounts:
             - name: postgres-storage
               mountPath: /var/lib/postgresql/data  # Dossier data de PostgreSQL
+
+          # -----------------------------------------------------------
+          # SONDE READINESS
+          # -----------------------------------------------------------
+          # Pour une base de données, on n'utilise PAS une sonde HTTP
+          # mais une sonde "exec" : Kubernetes execute une commande
+          # directement dans le conteneur et verifie son code de retour.
+          #
+          # pg_isready est l'outil officiel PostgreSQL pour verifier
+          # si le serveur accepte des connexions.
+          # Code retour 0 = prêt, autre = pas prêt.
+          #
+          # Consequence : tant que PostgreSQL initialise ses fichiers
+          # de données (ce qui peut prendre plusieurs secondes),
+          # Odoo ne reçoit aucune connexion vers ce pod.
+          # -----------------------------------------------------------
+          readinessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U           # option : specifier l'utilisateur
+                - odoo         # l'utilisateur Odoo defini dans les secrets
+            initialDelaySeconds: 5   # PostgreSQL démarre vite mais init les fichiers
+            periodSeconds: 10
+            failureThreshold: 3
+
+          # -----------------------------------------------------------
+          # SONDE LIVENESS
+          # -----------------------------------------------------------
+          # Même commande pg_isready mais avec un délai plus long.
+          # Si PostgreSQL ne repond plus du tout (crash, deadlock total),
+          # Kubernetes redemarre le conteneur automatiquement.
+          #
+          # Le délai est plus long (20s) car l'initialisation des fichiers
+          # de données PostgreSQL peut prendre du temps au premier démarrage.
+          # On ne veut pas tuer un pod qui est encore en train de s'initialiser.
+          # -----------------------------------------------------------
+          livenessProbe:
+            exec:
+              command:
+                - pg_isready
+                - -U
+                - odoo
+            initialDelaySeconds: 20  # plus long : init BDD peut être lente
+            periodSeconds: 30
+            failureThreshold: 3
+
       volumes:
         - name: postgres-storage
           persistentVolumeClaim:

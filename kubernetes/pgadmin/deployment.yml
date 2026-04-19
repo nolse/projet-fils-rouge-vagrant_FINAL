@@ -8,7 +8,6 @@
 # La préconfiguration de la connexion BDD se fait via
 # le fichier servers.json monté en ConfigMap (voir plus bas).
 # =============================================================
-
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -40,7 +39,6 @@ spec:
                 secretKeyRef:
                   name: icgroup-secrets
                   key: PGADMIN_EMAIL
-
             # Mot de passe de connexion à l'interface pgAdmin
             - name: PGADMIN_DEFAULT_PASSWORD
               valueFrom:
@@ -54,6 +52,48 @@ spec:
               mountPath: /pgadmin4/servers.json
               subPath: servers.json             # On monte juste ce fichier,
                                                 # pas tout le dossier
+
+          # -----------------------------------------------------------
+          # SONDE READINESS
+          # -----------------------------------------------------------
+          # pgAdmin expose une route /misc/ping dédiée aux health checks.
+          # C'est la méthode recommandée par l'image officielle dpage/pgadmin4.
+          # Elle retourne 200 uniquement quand l'application est
+          # complètement initialisée et prête à servir des requêtes.
+          #
+          # initialDelaySeconds à 60s : pgAdmin est une application lourde
+          # (Python + Flask + initialisation BDD interne). En pratique,
+          # 20s était insuffisant — la sonde échouait systématiquement
+          # et déclenchait des redémarrages inutiles (faux positifs).
+          # -----------------------------------------------------------
+          readinessProbe:
+            httpGet:
+              path: /misc/ping   # route health check officielle de pgAdmin
+              port: 80
+            initialDelaySeconds: 60  # augmenté : pgAdmin est lent à initialiser
+            periodSeconds: 10
+            failureThreshold: 3      # 3 echecs → retiré du Service, pas tué
+
+          # -----------------------------------------------------------
+          # SONDE LIVENESS
+          # -----------------------------------------------------------
+          # Même route /misc/ping pour vérifier que pgAdmin est toujours
+          # vivant. Si le serveur web interne ne répond plus du tout,
+          # Kubernetes redémarre le conteneur automatiquement.
+          #
+          # initialDelaySeconds à 120s : cas classique de faux positif —
+          # la liveness tuait le pod avant qu'il ait fini de démarrer.
+          # On lui laisse 2 minutes avant de commencer à surveiller
+          # sa santé, ce qui couvre le pire cas d'initialisation.
+          # -----------------------------------------------------------
+          livenessProbe:
+            httpGet:
+              path: /misc/ping   # même route - un 200 confirme que pgAdmin tourne
+              port: 80
+            initialDelaySeconds: 120  # augmenté : évite de tuer un pod en cours d'init
+            periodSeconds: 30
+            failureThreshold: 3      # 3 echecs → Kubernetes redémarre le pod
+
       volumes:
         - name: pgadmin-config
           configMap:
