@@ -381,7 +381,8 @@ bash kubernetes/commandes_utils.sh deploy
 # 4. Verifier l'etat
 kubectl get pods -n icgroup;kubectl get svc -n icgroup;kubectl get pvc -n icgroup
 
-# 5. Fin de session
+# Attendre que tous les pods soient READY et se connecter avec les URLS
+# 5. A la Fin de session
 minikube stop
 ```
 
@@ -400,6 +401,7 @@ depuis la machine hote Windows.
 
 **Installation :**
 ```bash
+
 # Activer les addons Minikube
 minikube addons enable ingress
 minikube addons enable metallb
@@ -420,15 +422,33 @@ data:
       - 192.168.49.100-192.168.49.110
 EOF
 
+# Patcher l'ingress-nginx en LoadBalancer pour que MetalLB lui attribue
+# une IP fixe (192.168.49.100) depuis le pool configure ci-dessus.
+# Par defaut l'addon ingress de Minikube cree un service de type NodePort
+# avec un port aleatoire — le patch force le type LoadBalancer ce qui
+# stabilise l'IP et le port 80 entre les sessions.
+kubectl patch svc ingress-nginx-controller -n ingress-nginx \
+  -p '{"spec": {"type": "LoadBalancer"}}'
+
 # Deployer l'Ingress
 kubectl apply -f kubernetes/ingress.yml
+
+# Verifier que l'external IP soit attribué.
+kubectl get svc -n ingress-nginx
+
+# Relancer les regles iptables pour prendre en compte le nouveau
+# NodePort cree par l'ingress-nginx (change a chaque activation).
+# Sans cette etape, les URLs en noms de domaine restent inaccessibles
+# depuis Windows meme si l'Ingress est correctement configure.
+bash setup-network.sh
+
 ```
 
-**Ajouter dans `C:\Windows\System32\drivers\etc\hosts` (Windows) :**
+**Ajouter dans `C:\Windows\System32\drivers\etc\hosts` (Windows) l'ip de la VM :**
 ```
-192.168.49.100  ic-webapp.icgroup.fr
-192.168.49.100  odoo.icgroup.fr
-192.168.49.100  pgadmin.icgroup.fr
+192.168.56.100  ic-webapp.icgroup.fr
+192.168.56.100  odoo.icgroup.fr
+192.168.56.100  pgadmin.icgroup.fr
 ```
 
 | Application | URL Ingress |
@@ -436,6 +456,52 @@ kubectl apply -f kubernetes/ingress.yml
 | ic-webapp | http://ic-webapp.icgroup.fr |
 | Odoo | http://odoo.icgroup.fr |
 | pgAdmin | http://pgadmin.icgroup.fr |
+
+## Sondes Liveness, Readiness & Startup
+
+Les sondes permettent à Kubernetes de surveiller l'état réel de chaque application
+et d'agir automatiquement en cas de problème (self-healing).
+
+### Les 3 rôles
+
+| Sonde | Question posée | Conséquence si échec |
+|---|---|---|
+| `readinessProbe` | Le pod est-il prêt à recevoir du trafic ? | Retiré du Service — pas tué |
+| `livenessProbe` | Le pod est-il toujours vivant ? | Tué et redémarré automatiquement |
+| `startupProbe` | Le pod a-t-il fini de démarrer ? | Désactive liveness et readiness pendant le démarrage |
+
+### Les 3 types de check
+
+| Type | Mécanisme | Utilisé pour |
+|---|---|---|
+| `httpGet` | Requête HTTP — 200-399 = succès | ic-webapp, Odoo, pgAdmin |
+| `exec` | Commande shell — code retour 0 = succès | PostgreSQL (`pg_isready`) |
+| `tcpSocket` | Connexion TCP — établie = succès | Odoo (liveness) |
+
+### Récapitulatif par application
+
+| Application | Readiness | Liveness | Particularité |
+|---|---|---|---|
+| ic-webapp | httpGet `/` port 8080 | httpGet `/` port 8080 | Application stateless simple |
+| PostgreSQL | exec `pg_isready -U odoo` | exec `pg_isready -U odoo` | Pas de HTTP — outil natif pg_isready |
+| Odoo | httpGet `/` port 8069 | tcpSocket port 8069 | startupProbe + initContainer wait-for-postgres |
+| pgAdmin | httpGet `/misc/ping` port 80 | httpGet `/misc/ping` port 80 | Route /misc/ping dédiée aux health checks |
+
+### initContainer sur Odoo
+
+Kubernetes ne garantit pas l'ordre de démarrage des pods. Odoo démarre avant que
+PostgreSQL soit prêt à accepter des connexions, ce qui provoque un crash immédiat.
+
+Un `initContainer` (busybox) bloque le démarrage d'Odoo en boucle TCP sur
+`postgres-service:5432` toutes les 2s, jusqu'à ce que PostgreSQL réponde.
+
+```bash
+# Vérifier que les sondes sont bien configurées
+kubectl describe pod -n icgroup -l app=ic-webapp | grep -A 10 "Liveness\|Readiness"
+kubectl describe pod -n icgroup -l app=postgres | grep -A 10 "Liveness\|Readiness"
+kubectl describe pod -n icgroup -l app=odoo | grep -A 15 "Liveness\|Readiness\|Startup"
+kubectl describe pod -n icgroup -l app=pgadmin | grep -A 10 "Liveness\|Readiness"
+```
 
 > **Note** : L'annotation `rewrite-target` a ete supprimee de `ingress.yml` —
 > elle provoquait des erreurs de navigation dans Odoo et pgAdmin.

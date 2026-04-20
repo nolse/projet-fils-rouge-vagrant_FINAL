@@ -480,7 +480,7 @@ postgres-service    ClusterIP   10.106.88.245   <none>        5432/TCP
 
 ---
 
-# 9. Ingress Controller et MetalLB
+# 9 . Ingress Controller et MetalLB
 
 ## Objectif
 
@@ -489,6 +489,10 @@ Au-delà de l'accès via NodePort, une couche Ingress a été mise en place pour
 ## MetalLB — Load Balancer bare-metal
 
 Minikube ne disposant pas de Load Balancer natif (contrairement à un cloud provider), **MetalLB** a été installé pour attribuer une IP externe aux services de type `LoadBalancer`.
+
+### Installation
+
+```bash
 
 ### Installation
 
@@ -511,17 +515,24 @@ data:
       addresses:
       - 192.168.49.100-192.168.49.110
 EOF
+
+# Par défaut, l'addon ingress de Minikube crée ingress-nginx en type NodePort
+# avec un port aléatoire. Il faut le patcher en LoadBalancer pour que MetalLB
+# lui attribue une IP fixe (192.168.49.100) depuis le pool configuré ci-dessus.
+# Sans ce patch, MetalLB n'intervient pas et l'EXTERNAL-IP reste vide.
+kubectl patch svc ingress-nginx-controller -n ingress-nginx \
+  -p '{"spec": {"type": "LoadBalancer"}}'
 ```
 
 ### Vérification
 
 ```bash
-kubectl get svc -n metallb-system
-
-# L'Ingress Controller NGINX obtient une EXTERNAL-IP depuis le pool MetalLB
+# Vérifier que l'EXTERNAL-IP est bien attribuée par MetalLB
 kubectl get svc -n ingress-nginx
-NAME                                 TYPE           CLUSTER-IP      EXTERNAL-IP      PORT(S)
-ingress-nginx-controller             LoadBalancer   10.108.12.45    192.168.49.100   80:32080/TCP,443:32443/TCP
+NAME                                 TYPE           CLUSTER-IP       EXTERNAL-IP      PORT(S)
+ingress-nginx-controller             LoadBalancer   10.97.114.215    192.168.49.100   80:30938/TCP,443:32025/TCP
+```
+
 ```
 
 ## Ingress Controller NGINX
@@ -597,12 +608,12 @@ icgroup-ingress    nginx   ic-webapp.icgroup.fr,odoo.icgroup.fr,pgadmin.icgroup.
 
 ## Résolution DNS locale (fichier hosts)
 
-Pour accéder aux applications via leurs noms de domaine depuis Windows, ajouter les entrées suivantes dans `C:\Windows\System32\drivers\etc\hosts` :
+Pour accéder aux applications via leurs noms de domaine depuis Windows, ajouter les entrées suivantes avec l'ip de la VM dans `C:\Windows\System32\drivers\etc\hosts` :
 
 ```
-192.168.49.100  ic-webapp.icgroup.fr
-192.168.49.100  odoo.icgroup.fr
-192.168.49.100  pgadmin.icgroup.fr
+192.168.56.100  ic-webapp.icgroup.fr
+192.168.56.100  odoo.icgroup.fr
+192.168.56.100  pgadmin.icgroup.fr
 ```
 
 > L'IP `192.168.49.100` est l'adresse attribuée par MetalLB à l'Ingress Controller NGINX. Toutes les requêtes HTTP vers les trois domaines arrivent sur ce point d'entrée unique, puis sont routées vers le bon service selon le `Host` header.
@@ -614,6 +625,101 @@ Pour accéder aux applications via leurs noms de domaine depuis Windows, ajouter
 | ic-webapp | http://ic-webapp.icgroup.fr | ic-webapp-service:8080 |
 | Odoo | http://odoo.icgroup.fr | odoo-service:8069 |
 | pgAdmin | http://pgadmin.icgroup.fr | pgadmin-service:80 |
+
+####
+
+# 10. Sondes Liveness, Readiness & Startup
+
+## Objectif
+
+Dans un cluster Kubernetes, un pod en état `Running` ne signifie pas nécessairement
+que l'application est opérationnelle. Les sondes permettent à Kubernetes de distinguer
+trois états distincts : le pod démarre, le pod est prêt à servir, le pod est vivant.
+
+## Les trois types de sondes
+
+### readinessProbe — "Prêt à recevoir du trafic ?"
+
+La readiness probe détermine si un pod peut recevoir des requêtes via son Service.
+Tant qu'elle échoue, le pod est retiré de la rotation du Service mais reste vivant.
+
+Cas concret : au démarrage d'Odoo, l'application met plusieurs dizaines de secondes
+à charger ses modules. Sans readiness probe, le Service enverrait des requêtes vers
+un pod qui retourne des erreurs 500. Avec la sonde, Kubernetes attend que l'application
+soit réellement opérationnelle avant de lui envoyer du trafic.
+
+### livenessProbe — "Toujours vivant ?"
+
+La liveness probe détecte les pods bloqués (boucle infinie, deadlock, crash silencieux)
+et les redémarre automatiquement. C'est le mécanisme de **self-healing** de Kubernetes.
+
+### startupProbe — "A-t-il fini de démarrer ?"
+
+La startup probe résout le problème des applications lentes à démarrer.
+Tant qu'elle n'a pas réussi, les sondes liveness et readiness sont complètement
+désactivées — l'application peut s'initialiser sans être perturbée ni tuée.
+
+## Les trois types de check
+
+| Type | Mécanisme | Cas d'usage |
+|---|---|---|
+| `httpGet` | Requête HTTP — 200-399 = succès | Applications web exposant une route |
+| `exec` | Commande shell — code retour 0 = succès | Bases de données, outils CLI |
+| `tcpSocket` | Connexion TCP — établie = succès | Vérification légère qu'un process écoute |
+
+## Implémentation par application
+
+### ic-webapp
+
+Application Flask stateless — sonde `httpGet` sur `/` port 8080.
+Dès que Flask répond, le pod est considéré prêt et vivant.
+
+### PostgreSQL
+
+Pas d'interface HTTP — sonde `exec` avec `pg_isready -U odoo`.
+`pg_isready` est l'outil officiel PostgreSQL qui retourne 0 uniquement
+quand le serveur accepte des connexions TCP sur le port 5432.
+
+### Odoo
+
+Odoo présente deux problèmes spécifiques :
+
+**1. Dépendance à PostgreSQL** : Odoo crashe immédiatement si PostgreSQL n'est pas prêt.
+Kubernetes ne garantissant pas l'ordre de démarrage des pods, un `initContainer`
+(busybox) bloque le démarrage d'Odoo en boucle sur `postgres-service:5432`
+jusqu'à ce que la connexion TCP s'établisse.
+
+**2. Démarrage lent avec `--update=web`** : la régénération des assets CSS/JS
+provoque des erreurs 500 pendant l'initialisation, ce qui déclenchait des
+faux positifs sur la liveness probe (pod tué alors qu'il était en train de démarrer).
+La `startupProbe` désactive liveness et readiness pendant 5 minutes maximum,
+laissant Odoo finir son initialisation sans interruption.
+
+| Sonde | Type | Détail |
+|---|---|---|
+| startupProbe | httpGet `/` | 30 tentatives × 10s = 5 min max |
+| readinessProbe | httpGet `/` | Activée après succès de la startup |
+| livenessProbe | tcpSocket 8069 | Check TCP léger — suffisant pour détecter un crash |
+
+### pgAdmin
+
+pgAdmin expose une route dédiée `/misc/ping` recommandée par l'image officielle
+`dpage/pgadmin4`. Les `initialDelaySeconds` ont été calibrés à 60s (readiness)
+et 120s (liveness) car pgAdmin initialise une base SQLite interne au démarrage —
+des délais trop courts provoquaient des redémarrages en boucle (faux positifs).
+
+## Bilan
+
+| Application | initContainer | startupProbe | readinessProbe | livenessProbe |
+|---|---|---|---|---|
+| ic-webapp | ✗ | ✗ | httpGet `/` | httpGet `/` |
+| PostgreSQL | ✗ | ✗ | exec `pg_isready` | exec `pg_isready` |
+| Odoo | ✅ wait-for-postgres | ✅ httpGet `/` | httpGet `/` | tcpSocket |
+| pgAdmin | ✗ | ✗ | httpGet `/misc/ping` | httpGet `/misc/ping` |
+
+L'ajout des sondes transforme le déploiement en infrastructure **auto-réparatrice** :
+tout pod défaillant est détecté et redémarré sans intervention manuelle,
+et aucun pod non prêt ne reçoit de trafic utilisateur.
 
 ## Illustrations du travail
 
@@ -743,14 +849,6 @@ Ce projet fil rouge a permis de mettre en œuvre un pipeline DevOps complet, de 
 ✅ Partie 3 — Accès externe via NodePort pour ic-webapp, Odoo et pgAdmin  
 ✅ Partie 3 — Ingress Controller NGINX avec routage par nom de domaine  
 ✅ Partie 3 — MetalLB pour l'attribution d'une IP externe en environnement bare-metal  
-
-## Perspectives d'évolution
-
-- 🔜 Intégration de sondes Liveness et Readiness dans les Deployments
-- 🔜 Passage à un cluster Kubernetes multi-nœuds (kubeadm)
-- 🔜 Mise en place de Helm Charts pour la gestion des déploiements
-- 🔜 Intégration d'une solution de monitoring (Prometheus + Grafana)
-- 🔜 Ajout du TLS/HTTPS via cert-manager sur l'Ingress
 
 ---
 

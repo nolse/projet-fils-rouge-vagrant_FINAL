@@ -107,6 +107,29 @@ spec:
                   key: POSTGRES_PASSWORD
 
           # -----------------------------------------------------------
+          # SONDE STARTUP
+          # -----------------------------------------------------------
+          # La startupProbe résout le problème des applications lentes
+          # à démarrer comme Odoo avec --update=web (2 replicas).
+          #
+          # Tant qu'elle n'a pas réussi une fois, les sondes liveness
+          # et readiness sont complètement désactivées — Odoo peut
+          # terminer son initialisation sans être perturbé par des
+          # checks HTTP qui retournent 500 pendant le chargement
+          # du registre de modules.
+          #
+          # Calcul du délai maximum accordé au démarrage :
+          # failureThreshold x periodSeconds = 30 x 10s = 300s (5 min)
+          # Au-delà, Kubernetes considère le pod comme défaillant.
+          # -----------------------------------------------------------
+          startupProbe:
+            httpGet:
+              path: /            # même route que la readiness
+              port: 8069
+            failureThreshold: 30     # 30 tentatives maximum avant d'abandonner
+            periodSeconds: 10        # toutes les 10s → 5 minutes max pour démarrer
+
+          # -----------------------------------------------------------
           # SONDE READINESS
           # -----------------------------------------------------------
           # Odoo 13 n'expose pas de route /health dédiée.
