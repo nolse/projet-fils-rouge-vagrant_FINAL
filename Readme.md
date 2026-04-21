@@ -42,16 +42,15 @@ vagrant up && vagrant ssh
 
 ```bash
 cd ~
-git clone https://github.com/nolse/projet-fils-rouge-vagrant.git
+git clone https://github.com/nolse/projet-fils-rouge-vagrant_FINAL.git
 cd projet-fils-rouge-vagrant
 ```
 
 Verifier que ansible.cfg est bien reconnu :
 ```bash
 ansible --version | grep "config file"
-# Attendu : config file = /home/vagrant/projet-fils-rouge-vagrant/ansible.cfg
+# Attendu : config file = /home/vagrant/sondes-projet-fils-rouge/projet-fils-rouge-vagrant_INGDM/ansible.cfg
 ```
-
 ### 3. Placer la cle SSH AWS dans ~/.ssh/
 
 > La cle `projet-fil-rouge-key.pem` doit imperativement etre dans `~/.ssh/`
@@ -151,7 +150,6 @@ docker run -d \
 curl http://localhost:8085
 docker rm -f test-ic-webapp
 ```
-
 ---
 
 ## Partie 2 — CI/CD Jenkins + Ansible + Terraform
@@ -235,7 +233,7 @@ docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 New Item → ic-webapp → Pipeline → OK
 Definition           : Pipeline script from SCM
 SCM                  : Git
-Repository URL       : https://github.com/nolse/projet-fils-rouge-vagrant.git
+Repository URL       : https://github.com/nolse/projet-fils-rouge-vagrant_FINAL.git 
 Branch               : */main
 Script Path          : Jenkinsfile
 Lightweight checkout : decocher
@@ -278,7 +276,6 @@ Manage Jenkins → Credentials → Add Credentials
 3. Configurer Slack dans Jenkins :
 
 Manage Jenkins → Configure System → Slack
-
 
 - Workspace : votre workspace  
 - Credential : `slack-token`  
@@ -383,6 +380,7 @@ bash kubernetes/commandes_utils.sh deploy
 kubectl get pods -n icgroup;kubectl get svc -n icgroup;kubectl get pvc -n icgroup
 
 # Attendre que tous les pods soient READY et se connecter avec les URLS
+kubectl get pods -n icgroup
 # 5. A la Fin de session
 minikube stop
 ```
