@@ -256,6 +256,7 @@ Payload URL  : http://<jenkins_ip>:8080/github-webhook/
 Content type : application/json
 Trigger      : Just the push event
 
+```
 ### Notifications Slack (Jenkins)
 
 Le pipeline envoie automatiquement une notification Slack :
@@ -285,7 +286,7 @@ Manage Jenkins → Configure System → Slack
 
 Tester avec **Test Connection** → message "Success"
 
-> Une fois configure, les notifications sont envoyees automatiquement par le pipeline.
+> Une fois Jenkins configuré à l'étape 3, c'est le pipeline CI/CD qui prendra le relai.
 
 ```
 
