@@ -53,7 +53,7 @@ vagrant up && vagrant ssh
 
 ```bash
 cd ~
-git clone https://github.com/nolse/projet-fils-rouge-vagrant_INGDM.git
+git clone https://github.com/nolse/projet-fils-rouge-vagrant_FINAL.git 
 cd projet-fils-rouge-vagrant_INGDM
  
 ```
