@@ -363,7 +363,6 @@ bash setup-network.sh
 # 3. Déployer toutes les ressources Kubernetes
 bash kubernetes/commandes_utils.sh deploy
 ```
-
 > ⚠️ Les règles iptables sont perdues à chaque redémarrage de la VM. Relancer `setup-network.sh` à chaque nouvelle session.
 
 ## Namespace
@@ -440,7 +439,6 @@ NAME           STATUS   VOLUME                                     CAPACITY   AC
 odoo-pvc       Bound    pvc-34147d49-f4a2-4f3c-8f37-a414cd756640   1Gi        RWO
 postgres-pvc   Bound    pvc-3e35963e-4c56-4b26-9910-3ca9d07cafdd   2Gi        RWO
 ```
-
 ---
 
 # 8. Vérification du Déploiement
@@ -494,9 +492,6 @@ Minikube ne disposant pas de Load Balancer natif (contrairement à un cloud prov
 
 ```bash
 
-### Installation
-
-```bash
 # Activer l'addon MetalLB intégré à Minikube
 minikube addons enable metallb
 
@@ -523,7 +518,6 @@ EOF
 kubectl patch svc ingress-nginx-controller -n ingress-nginx \
   -p '{"spec": {"type": "LoadBalancer"}}'
 ```
-
 ### Vérification
 
 ```bash
@@ -531,8 +525,6 @@ kubectl patch svc ingress-nginx-controller -n ingress-nginx \
 kubectl get svc -n ingress-nginx
 NAME                                 TYPE           CLUSTER-IP       EXTERNAL-IP      PORT(S)
 ingress-nginx-controller             LoadBalancer   10.97.114.215    192.168.49.100   80:30938/TCP,443:32025/TCP
-```
-
 ```
 
 ## Ingress Controller NGINX
@@ -592,7 +584,6 @@ spec:
                 port:
                   number: 80
 ```
-
 > ⚠️ L'annotation `nginx.ingress.kubernetes.io/rewrite-target: /` a été volontairement supprimée. Elle provoquait une réécriture systématique des URLs vers `/`, cassant la navigation dans Odoo et pgAdmin (sous-routes non résolues). Sans cette annotation, le routage fonctionne correctement pour les trois applications.
 
 ### Déploiement
@@ -617,6 +608,9 @@ Pour accéder aux applications via leurs noms de domaine depuis Windows, ajouter
 ```
 
 > L'IP `192.168.49.100` est l'adresse attribuée par MetalLB à l'Ingress Controller NGINX. Toutes les requêtes HTTP vers les trois domaines arrivent sur ce point d'entrée unique, puis sont routées vers le bon service selon le `Host` header.
+> L'IP `192.168.49.100` est attribuée par MetalLB à l'Ingress Controller NGINX à l'intérieur du réseau Minikube. 
+Le fichier hosts pointe vers `192.168.56.100` (IP de la VM Vagrant) 
+car les règles iptables de setup-network.sh redirigent le trafic entrant vers l'Ingress Controller.
 
 ## URLs d'accès via Ingress (Partie 3 — bonus)
 
@@ -625,8 +619,6 @@ Pour accéder aux applications via leurs noms de domaine depuis Windows, ajouter
 | ic-webapp | http://ic-webapp.icgroup.fr | ic-webapp-service:8080 |
 | Odoo | http://odoo.icgroup.fr | odoo-service:8069 |
 | pgAdmin | http://pgadmin.icgroup.fr | pgadmin-service:80 |
-
-####
 
 # 10. Sondes Liveness, Readiness & Startup
 
@@ -789,10 +781,9 @@ et aucun pod non prêt ne reçoit de trafic utilisateur.
   <img src="./images/PART3_PGADMIN_URLOK2.png" width="700"><br><br>
 </p>
 
-
 ---
 
-# 10. Tests de Fonctionnement
+# 11. Tests de Fonctionnement
 
 ## URLs d'accès depuis Windows (NodePort — Partie 3)
 
@@ -814,7 +805,7 @@ Connexion PostgreSQL depuis pgAdmin : Host = `postgres-service` | Port = `5432` 
 
 ---
 
-# 11. Troubleshooting
+# 12. Troubleshooting
 
 | Problème | Cause | Solution |
 |---|---|---|
@@ -831,7 +822,7 @@ Connexion PostgreSQL depuis pgAdmin : Host = `postgres-service` | Port = `5432` 
 
 ---
 
-# 12. Conclusion
+# 13. Conclusion
 
 Ce projet fil rouge a permis de mettre en œuvre un pipeline DevOps complet, de la conteneurisation à l'orchestration, en couvrant l'ensemble des pratiques modernes du métier.
 
