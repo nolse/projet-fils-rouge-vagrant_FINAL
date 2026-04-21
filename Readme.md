@@ -73,6 +73,7 @@ cp ~/.ssh/projet-fil-rouge-key.pem .secrets/
 ```
 
 ### 5. Installer les prerequis via bootstrap
+# Le script verifie si c'est présent sinon l'install
 
 ```bash
 bash bootstrap.sh
@@ -174,6 +175,16 @@ webapp  = "X.X.X.X"
 
 ### Etape 2 — Deploiement initial via Ansible
 
+> **Types d'instances EC2 utilisées par défaut :**
+> | Serveur | Type | Raison |
+> |---|---|---|
+> | Jenkins | t3.medium | CI/CD — besoin de ressources |
+> | Odoo | t3.medium | ERP — besoin de ressources |
+> | webapp | t3.micro | Site vitrine + pgAdmin |
+>
+> Pour modifier le type d'instance, éditer `terraform/app/main.tf`
+> et changer la valeur `instance_type` du serveur concerné avant de lancer `reproduce_infra.sh`.
+
 > Ce script effectue le deploiement initial avant configuration de Jenkins.
 > Une fois Jenkins configure, c'est le pipeline CI/CD qui prend le relai.
 
@@ -187,6 +198,25 @@ Ce script :
 - Genere l'inventaire depuis `terraform_ips.json`
 - Attend que les instances AWS soient disponibles en SSH
 - Deploie Odoo, ic-webapp, pgAdmin et Jenkins via Ansible (4 roles)
+
+### Identifiants de connexion
+
+| Application | Identifiant | Mot de passe |
+|---|---|---|
+| pgAdmin | admin@icgroup.fr | pgadmin_password |
+| Odoo | admin | admin |
+| PostgreSQL (via pgAdmin) | odoo | odoo_password |
+
+Connexion PostgreSQL depuis pgAdmin : Host = `postgres-service` | Port = `5432` | Database = `odoo`
+
+> **Première connexion Odoo** : à la première ouverture, Odoo affiche un formulaire
+> de création de base de données. Remplir les champs puis créer la base avant
+> de pouvoir se connecter avec les identifiants admin/admin.
+
+
+###  Troubleshooting :
+
+sysctl permission denied dans jenkins_role — Ces warnings apparaissent lors de l'installation de paquets apt dans le container Jenkins (Docker sans privilèges kernel). Ils sont non bloquants et n'affectent pas le fonctionnement de Jenkins.
 
 ### Etape 3 — Configuration Jenkins
 
@@ -255,38 +285,43 @@ Content type : application/json
 Trigger      : Just the push event
 
 ```
+#### Configuration rapide
+
+1. Installer le plugin Slack :
+   - Manage Jenkins → Plugins → Available plugins
+   - Rechercher "Slack Notification" → Install
+   - Redémarrer Jenkins si demandé
+
+2. Récupérer le token Slack :
+   - Slack → Apps → Jenkins CI → Configuration → copier le token
+
+3. Ajouter le credential dans Jenkins :
+   - Manage Jenkins → Credentials → Global → Add Credentials
+   - Kind : **Secret text**
+   - Secret : token Slack
+   - ID : `slack-token`
+
+4. Configurer Slack dans Jenkins :
+   - Manage Jenkins → Configure System → Slack
+   - Workspace : votre workspace # exemple pozosworkspace
+   - Credential : `slack-token`
+   - Channel : `#jenkins-eazytraining-alpha-alerte`
+
+Tester avec **Test Connection** → message "Success"
+
 ### Notifications Slack (Jenkins)
 
 Le pipeline envoie automatiquement une notification Slack :
 - Succes → message vert
 - Echec → message rouge
 
-#### Configuration rapide
-
-1. Recuperer le token Slack :
-   - Slack → Apps → Jenkins CI → Configuration → copier le token
-
-2. Ajouter le credential dans Jenkins :
-Manage Jenkins → Credentials → Add Credentials
-
-- Kind : Secret text  
-- Secret : token Slack  
-- ID : `slack-token`
-
-3. Configurer Slack dans Jenkins :
-
-Manage Jenkins → Configure System → Slack
-
-- Workspace : votre workspace  
-- Credential : `slack-token`  
-- Channel : `#jenkins-eazytraining-alpha-alerte`
-
 Tester avec **Test Connection** → message "Success"
 
 > Une fois Jenkins configuré à l'étape 3, c'est le pipeline CI/CD qui prendra le relai.
 
+La configuration Slack doit être effectuée avant le premier run du pipeline. Sans le credential slack-token, 
+le pipeline échouera sur l'étape de notification.
 ```
-
 ### Etape 4 — Run manuel (version 1.0)
 
 Dans Jenkins → job `ic-webapp` → **Build Now**
@@ -353,7 +388,6 @@ Verifier dans Jenkins que le build se lance sans intervention manuelle.
 ```bash
 bash reproduce_infra.sh destroy
 ```
-
 ---
 
 ## Partie 3 — Kubernetes (Minikube)

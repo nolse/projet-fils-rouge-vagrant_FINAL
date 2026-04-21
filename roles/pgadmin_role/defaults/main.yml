@@ -2,7 +2,7 @@
 # Valeurs par défaut — surchargeables depuis le playbook ou l'inventaire
 # pgadmin_db_host sera écrasé par l'IP privée du serveur odoo au moment du déploiement
 pgadmin_port: 5050
-pgadmin_email: admin@admin.com
-pgadmin_password: admin
+pgadmin_email: admin@icgroup.fr 
+pgadmin_password: pgadmin_password
 pgadmin_db_host: db        # IP ou hostname du serveur PostgreSQL (serveur odoo)
 pgadmin_db_user: odoo      # Doit correspondre à POSTGRES_USER dans odoo_role
