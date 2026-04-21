@@ -468,7 +468,7 @@ kubectl apply -f kubernetes/ingress.yml
 
 # Verifier que l'external IP soit attribué.
 kubectl get svc -n ingress-nginx
-
+kubectl get svc -n ingress-nginx
 # Relancer les regles iptables pour prendre en compte le nouveau
 # NodePort cree par l'ingress-nginx (change a chaque activation).
 # Sans cette etape, les URLs en noms de domaine restent inaccessibles
@@ -476,7 +476,6 @@ kubectl get svc -n ingress-nginx
 bash setup-network.sh
 
 ```
-
 **Ajouter dans `C:\Windows\System32\drivers\etc\hosts` (Windows) l'ip de la VM :**
 ```
 192.168.56.100  ic-webapp.icgroup.fr

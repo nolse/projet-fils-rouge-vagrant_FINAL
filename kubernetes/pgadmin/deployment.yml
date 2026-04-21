@@ -70,7 +70,7 @@ spec:
             httpGet:
               path: /misc/ping   # route health check officielle de pgAdmin
               port: 80
-            initialDelaySeconds: 60  # augmenté : pgAdmin est lent à initialiser
+            initialDelaySeconds: 80  # augmenté : pgAdmin est lent à initialiser
             periodSeconds: 10
             failureThreshold: 3      # 3 echecs → retiré du Service, pas tué
 
@@ -90,7 +90,7 @@ spec:
             httpGet:
               path: /misc/ping   # même route - un 200 confirme que pgAdmin tourne
               port: 80
-            initialDelaySeconds: 120  # augmenté : évite de tuer un pod en cours d'init
+            initialDelaySeconds: 160  # augmenté : évite de tuer un pod en cours d'init
             periodSeconds: 30
             failureThreshold: 3      # 3 echecs → Kubernetes redémarre le pod
 

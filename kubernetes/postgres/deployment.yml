@@ -72,9 +72,10 @@ spec:
                 - pg_isready
                 - -U           # option : specifier l'utilisateur
                 - odoo         # l'utilisateur Odoo defini dans les secrets
-            initialDelaySeconds: 5   # PostgreSQL démarre vite mais init les fichiers
-            periodSeconds: 10
+            initialDelaySeconds: 20   # PostgreSQL démarre vite mais init les fichiers
+            periodSeconds: 30
             failureThreshold: 3
+            timeoutSeconds: 5         # pg_isready peut être lent sur VM contrainte
 
           # -----------------------------------------------------------
           # SONDE LIVENESS
@@ -93,9 +94,10 @@ spec:
                 - pg_isready
                 - -U
                 - odoo
-            initialDelaySeconds: 20  # plus long : init BDD peut être lente
-            periodSeconds: 30
+            initialDelaySeconds: 60  # plus long : init BDD peut être lente
+            periodSeconds: 40
             failureThreshold: 3
+            timeoutSeconds: 5        # pg_isready peut être lent sur VM contrainte
 
       volumes:
         - name: postgres-storage
