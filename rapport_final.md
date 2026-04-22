@@ -729,13 +729,12 @@ et aucun pod non prêt ne reçoit de trafic utilisateur.
   <img src="./images/REPRODUCE_INFRA_INPROGRESS.png" width="700"><br><br>
   <img src="./images/REPRODUCE_INFRA_OK.png" width="700">
 
-  <img src="./images/ansible-ssh-key.png" width="700">
 </p>
 
 <p align="center">
   <img src="./images/REPRODUCE_DEPLOY_INPROGRESS.png" width="700">
   <img src="./images/REPRODUCE_DEPLOY_OK.png" width="700">
-
+  <img src="./images/ansible-ssh-key.png" width="700"
   <img src="./images/VARIABLES_ENV1.png" width="700"><br><br>
   <img src="./images/VARIABLES_ENV2.png" width="700"><br><br>
 </p>
