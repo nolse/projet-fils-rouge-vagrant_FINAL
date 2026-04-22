@@ -128,7 +128,7 @@ docker rm -f test-ic-webapp
 L'application accepte deux variables d'environnement configurables : `ODOO_URL` et `PGADMIN_URL`, qui paramètrent les liens affichés sur la page d'accueil.
 
 <p align="center">
-  <img src="./images/DOCKER_HUB.png" width="700">
+  <img src="./images/DOCKER_HUB.png" width="800">
 </p>
 
 ---
@@ -295,20 +295,22 @@ Un test de connexion permet de valider la configuration (message "Success" + not
 bash reproduce_infra.sh destroy
 ```
 <p align="center">
+  <img src="./images/TEST_CONNEXION_SLACK_OK.png" width="700"><br>
+  <img src="./images/PIPELINE_IC_WEBAPP_OK2.png" width="700"><br>
+  <img src="./images/NOTIFICATION_SUCCES_PIPELINE_WEBAPP.png" width="700"><br>
+  <img src="./images/PIPELINE_IC_WEBAPP_BLUEOCEAN_OK3_WITHNOTIF.png" width="700"><br>
+  <img src="./images/NOTIFICATION_SUCCES_PIPELINE_WEBAPP_FINAL.png" width="700"><br>
+</p>
+
+<p align="center">
   <img src="./images/IC_WEBAPP_URL_OK.png" width="700">
   <img src="./images/PGADMIN_URL_OK.png" width="700"><br><br>
   <img src="./images/ODOO_URL_OK.png" width="700">
 </p>
 
 <p align="center">
-  <img src="./images/TEST_CONNEXION_SLACK_OK.png" width="600"><br>
-  <img src="./images/PIPELINE_IC_WEBAPP_OK2.png" width="600"><br>
-  <img src="./images/NOTIFICATION_SUCCES_PIPELINE_WEBAPP.png" width="600"><br>
-  <img src="./images/PIPELINE_IC_WEBAPP_BLUEOCEAN_OK3_WITHNOTIF.png" width="600"><br>
-  <img src="./images/NOTIFICATION_SUCCES_PIPELINE_WEBAPP_FINAL.png" width="600"><br>
-  <img src="./images/bash_reproduce_infra.sh_destroy.png" width="600">
+  <img src="./images/bash_reproduce_infra.sh_destroy.png" width="700">
 </p>
-
 
 ---
 
@@ -327,9 +329,9 @@ La troisième partie orchestre l'ensemble des applications dans un cluster Kuber
 | Stockage | StorageClass standard (provisioning automatique) |
 
 <p align="center">
-  <img src="./images/ARCHITECTURE_GLOBAL.png" width="600">
+  <img src="./images/ARCHITECTURE_GLOBAL.png" width="700">
 
-  <img src="./images/synoptique_Kubernetes.jpeg" width="600">
+  <img src="./images/synoptique_Kubernetes.jpeg" width="700">
 </p>
 
 ## Identification des ressources (A → H)
@@ -724,11 +726,10 @@ et aucun pod non prêt ne reçoit de trafic utilisateur.
 </p>
 
 <p align="center">
-  <img src="./images/REPRODUCE_INFRA_OK.png" width="700">
   <img src="./images/REPRODUCE_INFRA_INPROGRESS.png" width="700"><br><br>
+  <img src="./images/REPRODUCE_INFRA_OK.png" width="700">
 
   <img src="./images/ansible-ssh-key.png" width="700">
-  <img src="./images/export_var.jpeg" width="700"><br><br>
 </p>
 
 <p align="center">

@@ -6,6 +6,7 @@ inventaire/hosts.yml
 .secrets/
 *.pem
 *.key
+secrets.yml
 inventaire/terraform_ips.json
 # Terraform — fichiers generés automatiquement
 terraform/.terraform/

@@ -407,6 +407,13 @@ minikube start --driver=docker
 # L'interface bridge Minikube est detectee automatiquement.
 bash setup-network.sh
 
+> Avant le déploiement, créer le fichier secrets à partir de l'exemple :
+> ```bash
+> cp kubernetes/secrets.yml.example kubernetes/secrets.yml
+> # Remplacer les valeurs par leur encodage base64
+> echo -n "odoo" | base64
+> ```
+
 # 3. Deployer toutes les ressources (premier demarrage uniquement)
 bash kubernetes/commandes_utils.sh deploy
 
@@ -440,6 +447,7 @@ minikube addons enable ingress
 minikube addons enable metallb
 
 # Configurer le pool d'IPs MetalLB
+
 kubectl apply -f - <<EOF
 apiVersion: v1
 kind: ConfigMap
