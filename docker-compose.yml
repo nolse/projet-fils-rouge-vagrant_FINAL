@@ -1,0 +1,55 @@
+---
+# ============================================================
+# docker-compose.yml — Déploiement local de ic-webapp
+#
+# Ce fichier permet de lancer l'application ic-webapp en local
+# sans avoir à taper manuellement la commande docker run.
+# Il équivaut exactement à :
+#   docker run -d --name ic-webapp -p 8085:8080 \
+#     -e ODOO_URL=https://www.odoo.com \
+#     -e PGADMIN_URL=https://www.pgadmin.org \
+#     alphabalde/ic-webapp:1.0
+#
+# Utilisation :
+#   docker compose up -d       # Démarrer le conteneur en arrière-plan
+#   curl http://localhost:8085 # Vérifier que l'application répond
+#   docker compose down        # Arrêter et supprimer le conteneur
+# ============================================================
+
+# Version du format docker-compose utilisée
+version: "3.8"
+
+services:
+
+  # ---------------------------------------------------------
+  # Service ic-webapp
+  # Application Flask qui affiche un catalogue de liens vers
+  # Odoo et pgAdmin via les variables d'environnement.
+  # ---------------------------------------------------------
+  ic-webapp:
+
+    # Image publiée sur Docker Hub lors de la Partie 1
+    image: alphabalde/ic-webapp:1.0
+
+    # Nom explicite du conteneur (plus lisible que le nom auto-généré)
+    container_name: ic-webapp
+
+    ports:
+      # Mapping port hôte:port conteneur
+      # L'application Flask écoute sur le port 8080 à l'intérieur du conteneur
+      # On l'expose sur le port 8085 de la machine hôte pour les tests locaux
+      - "8085:8080"
+
+    environment:
+      # URL vers l'instance Odoo — injectée dans l'interface web de ic-webapp
+      # En production (Kubernetes), ces valeurs seront remplacées par les
+      # noms de domaine définis dans l'Ingress (ex: odoo.icgroup.fr)
+      - ODOO_URL=https://www.odoo.com
+
+      # URL vers l'interface pgAdmin — injectée dans l'interface web de ic-webapp
+      # En production (Kubernetes), remplacée par pgadmin.icgroup.fr
+      - PGADMIN_URL=https://www.pgadmin.org
+
+    # Redémarre automatiquement le conteneur s'il s'arrête de façon inattendue
+    # "unless-stopped" = redémarre toujours sauf si on l'arrête manuellement
+    restart: unless-stopped

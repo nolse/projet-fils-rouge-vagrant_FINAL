@@ -2,8 +2,15 @@
 # ============================================================
 # requirements.yml — Collections Ansible requises
 # Installation : ansible-galaxy collection install -r requirements.yml
+#
+# Versions fixees et testees compatibles :
+#   ansible-core     : 2.15.12  (installe via bootstrap.sh)
+#   community.docker : 3.10.0   (requis pour docker_compose_v2)
+#
+# IMPORTANT : community.docker >= 3.0.0 requiert ansible-core >= 2.14
+# La version apt d'Ansible (2.10.x) est incompatible — utiliser pip3.
 # ============================================================
 collections:
   # Collection Docker — modules docker_compose_v2, docker_container, etc.
   - name: community.docker
-    version: ">=3.0.0"
+    version: "3.10.0"
